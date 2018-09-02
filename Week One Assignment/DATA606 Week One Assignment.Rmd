@@ -1,0 +1,177 @@
+---
+title: "DATA607 WEEK One Assignment"
+author: "John K. Hancock"
+date: "September 1, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+#### DATA606 WEEK ONE ASSIGMENT
+
+
+```{r}
+options(warn=-1)
+setwd('C:/Users/jkhan/Documents/CUNY/Fall 2018/DATA606/Week One due 09-02-2018')
+library(XML)
+library(httr)
+library(curl)
+library(stringr)
+```
+### Use Curl to download the data to a csv file.  Read the csv file into a dataframe.
+
+```{r}
+curl_download('https://archive.ics.uci.edu/ml/machine-learning-databases/mushroom/agaricus-lepiota.data', 'mushrooms.csv')
+mushrooms <- read.csv('mushrooms.csv',header = FALSE)
+unlink('mushrooms.csv')
+```
+```{r}
+head(mushrooms,5)
+```
+
+##Download the dictionary defining the columns.
+
+
+```{r}
+dictionary <- curl_download('https://archive.ics.uci.edu/ml/machine-learning-databases/mushroom/agaricus-lepiota.names', 'dictionary.txt')
+dictionary_text <- readLines('dictionary.txt')
+
+```
+
+### Use grep to find the Attribute section of the page
+```{r}
+grep('Attribute', dictionary_text)
+```
+```{r}
+vec <- c(dictionary_text[107:139])
+vec 
+```
+### Use a regular expression to find everything between the period and the colon.  Remove extraneous values.
+
+```{r}
+vec2 = gsub(".*\\.(.*)\\:.*", "\\1",vec)
+vec2 <-vec2[-c(2,5,8,13,14,17,21,23,28,30,32)]
+
+```
+
+### Trim the whitespaces 
+
+```{r}
+vec3 <- trimws(vec2)
+vec4 <- c("edible_poisonous")
+column_names <- c(vec4,vec3)
+length(column_names)
+```
+### Print out the first 7 rows of the data frame and take a look at its structure and names
+
+
+
+```{r}
+colnames(mushrooms) <- c(column_names)
+
+head(mushrooms,7)
+```
+```{r}
+str(mushrooms)
+```
+
+names
+```{r}
+names(mushrooms)
+```
+
+### Next I subsetted a new data frame using columns, "edible_poisonous", "odor", "population", and "habitat"
+
+
+
+```{r}
+new_shrooms <- mushrooms[c(1,6,22:23)]
+str(new_shrooms)
+```
+
+```{r}
+names(new_shrooms)
+```
+
+### To convert the abbreviations, I had to change the column to a character, convert the abbreviations, and then re-convert the column back to factor.
+
+```{r}
+new_shrooms$edible_poisonous <- as.character(new_shrooms$edible_poisonous)
+new_shrooms$edible_poisonous[new_shrooms$edible_poisonous == "p"] <- "poisonous"
+new_shrooms$edible_poisonous[new_shrooms$edible_poisonous == "e"] <- "edible"
+new_shrooms$edible_poisonous <- as.factor(new_shrooms$edible_poisonous)
+
+
+```
+```{r}
+str(new_shrooms)
+```
+
+### Repeat the process for the odor observation, but use a switch statement
+
+```{r}
+head(new_shrooms$odor,10)
+```
+
+```{r}
+new_shrooms$odor<- as.character(new_shrooms$odor)
+new_shrooms$odor <- sapply(new_shrooms$odor, switch,
+                   	a='almond',
+					l='anise',
+ 					c='creosote',
+ 					y='fishy',
+ 					f='foul',
+ 					m='musty',
+ 					n='none',
+ 					p='pungent',
+ 					s='spicy')
+new_shrooms$odor<- as.factor(new_shrooms$odor)
+
+```
+```{r}
+head(new_shrooms$odor,10)
+```
+
+```{r}
+str(new_shrooms)
+```
+```{r}
+new_shrooms$population<- as.character(new_shrooms$population)
+new_shrooms$population <- sapply(new_shrooms$population, switch,
+                   	a='abundant',
+					c='clustered',
+ 					n='numerous',
+ 					s='scattered',
+					v='several',
+					y='solitary')
+new_shrooms$population<- as.factor(new_shrooms$population)
+
+```
+```{r}
+head(new_shrooms$population,10)
+```
+### Finally, the habitat observation
+```{r}
+new_shrooms$habitat<- as.character(new_shrooms$habitat)
+new_shrooms$habitat <- sapply(new_shrooms$habitat, switch,
+                   	 g='grasses',
+					 l='leaves',
+					 m='meadows',
+					 p='paths',
+				 	 u='urban',
+					 w='waste',
+					 d='woods')
+new_shrooms$habitat<- as.factor(new_shrooms$habitat)
+```
+```{r}
+head(new_shrooms$habitat,10)
+```
+```{r}
+str(new_shrooms)
+```
+
+```{r}
+head(new_shrooms,20)
+```
+
