@@ -1,0 +1,136 @@
+---
+title: "DATA607 WEEK TWO ASSIGNMENT"
+author: "John K. Hancock"
+date: "September 7, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##Week Two Assignment DATA607 Importing Databases into R Fall 2018
+##John K. Hancock
+
+###This project entails connecting R to an instance of MYSQL, displaying tables/fields, creating dataframes, using a SQL query to create a combination of dataframes, and plotting insight gained from the data.
+
+
+####Import the necessary Libraries
+
+```{r}
+options(warn=-1)
+library(DBI)
+library(RMySQL)
+library(stringr)
+library(ggplot2)
+```
+####Establish a Connection to the MySql Instance through the user, Student01
+```{r}
+conn<- dbConnect(RMySQL::MySQL(),
+                  dbname="movie_reviews",
+                  host="DESKTOP-FGDMVA4",
+                  user="Student01", 
+                  password="CUNY_DATA607"
+                  )
+```
+####Printout list of tables in the connection
+
+```{r}
+dbListTables(conn)
+```
+####Read in one of the tables into a dataframe
+
+```{r}
+Reviewers <- dbReadTable(conn, 'Reviewers')
+
+```
+####Note: The import appended a "\r" after each entry in the Gender column.  So, the column needs a bit of cleaning. After research, this seems to be a bug in the code.  R interprets "\\n" as "\\r".
+
+```{r}
+Reviewers
+```
+
+```{r}
+Reviewers$Gender<- str_replace_all(Reviewers$Gender, "\r", "")
+```
+
+```{r}
+Reviewers
+```
+
+```{r}
+Reviews <- dbReadTable(conn, 'Reviews')
+Movies <- dbReadTable(conn, 'movies')
+
+Movies$Trailer <- str_replace_all(Movies$Trailer, "\r", "")
+Reviews$Comments <- str_replace_all(Reviews$Comments, "\r", "")
+
+```
+
+```{r}
+Reviews
+```
+```{r}
+Movies
+```
+
+```{r}
+dbListFields(conn, 'movies')
+```
+
+```{r}
+dbListFields(conn, 'reviews')
+```
+```{r}
+dbListFields(conn, 'reviewers')
+```
+
+
+####Create a dataframe that shows average rating per movie genre by gender
+
+```{r}
+genre_ratings_by_gender<- dbGetQuery(conn, "SELECT movies.Genre, reviewers.Gender, AVG(reviews.Rating) AS 'Average_Rating'
+                                            FROM movies  
+                                            INNER JOIN reviews ON reviews.MovieID = movies.ID 
+                                            INNER JOIN reviewers ON reviewers.ReviewerID = reviews.ReviewID
+                                            GROUP BY movies.genre, reviewers.gender")
+                                
+```
+####Clean up the "\r" 
+
+```{r}
+genre_ratings_by_gender$Gender <- str_replace_all(genre_ratings_by_gender$Gender, "\r", "")
+```
+
+
+```{r}
+genre_ratings_by_gender
+```
+
+####Change the Gender variable to a factor
+
+```{r}
+genre_ratings_by_gender$Gender <- as.factor(genre_ratings_by_gender$Gender)
+genre_ratings_by_gender
+```
+####Below, we can gain insight from the data by plotting the average rating by gender for each current genre of movies. Females in this sample prefer Animation Family, Documentaries and Romantic Comedies whereas Males also prefer Animation Family and Super Hero Action movies.
+
+```{r}
+ggplot(data=genre_ratings_by_gender, aes(x=Genre, y=Average_Rating, fill=Gender)) +
+  geom_bar(stat="identity", position=position_dodge())+
+  geom_text(aes(label=Average_Rating), vjust=1.6, color="white",
+            position = position_dodge(0.9), size=3.5)+
+  scale_fill_brewer(palette="Paired")+
+  theme_minimal() + theme(axis.text.x = element_text(angle = 60, hjust = 1))
+
+
+```
+
+####Finally, the connection is closed.
+
+
+```{r}
+dbDisconnect(conn)
+```
+
+
