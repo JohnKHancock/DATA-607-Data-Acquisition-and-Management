@@ -1,0 +1,55 @@
+---
+title: "Presentation"
+author: "John K. Hancock"
+date: "September 9, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+###Presentation R and RDBMS
+
+####Using the RSQLite and DBI packages
+```{r}
+options(warn=-1)
+library(RSQLite)
+library(DBI)
+# install.packages("devtools")
+devtools::install_github("rstats-db/RSQLite")
+```
+####Connecting  to the a SQLite version of the Lahman Baseball Database
+```{r}
+con = dbConnect(RSQLite::SQLite(),'lahman2016.sqlite')
+```
+
+####List Tables
+```{r}
+dbListTables(con)
+```
+####Master Table contains bibliographic information about the players
+
+```{r}
+dbListFields(con, "Master")
+```
+####Pitching Table contains information about pitching data.  These tables are related by playerID
+
+```{r}
+dbListFields(con, "Pitching")
+```
+####Select Pitchers with 3,000 or more strikeouts by using a SQL statement to join the Master and Pitching tables 
+
+```{r}
+pitchers<- dbGetQuery(con, "SELECT Master.nameLast, Master.nameGiven, sum(Pitching.SO) AS 'Strikeouts', sum(Pitching.W) As 'Wins'
+                                            FROM Master  
+                                            INNER JOIN Pitching ON Pitching.playerID = Master.playerID
+                                            GROUP BY Master.nameLast, Master.nameGiven 
+                                            HAVING sum(Pitching.SO) >= 3000
+                                            Order BY sum(Pitching.SO) desc, sum(Pitching.W) desc ")
+                                            
+```
+
+```{r}
+pitchers
+```
+
