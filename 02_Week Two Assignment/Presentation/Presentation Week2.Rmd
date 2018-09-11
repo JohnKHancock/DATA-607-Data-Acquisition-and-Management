@@ -15,8 +15,11 @@ knitr::opts_chunk$set(echo = TRUE)
 options(warn=-1)
 library(RSQLite)
 library(DBI)
-# install.packages("devtools")
-devtools::install_github("rstats-db/RSQLite")
+library(plyr)
+library(ggplot2)
+library(reshape2)
+
+
 ```
 ####Connecting  to the a SQLite version of the Lahman Baseball Database
 ```{r}
@@ -51,5 +54,31 @@ pitchers<- dbGetQuery(con, "SELECT Master.nameLast, Master.nameGiven, sum(Pitchi
 
 ```{r}
 pitchers
+```
+```{r}
+top_3_pitchers<- dbGetQuery(con, "SELECT Master.nameLast || ', ' || Master.nameGiven AS 'Name', sum(Pitching.SO) AS 'Strikeouts',     sum(Pitching.W) As                                  'Wins'
+                                            FROM Master  
+                                            INNER JOIN Pitching ON Pitching.playerID = Master.playerID
+                                            GROUP BY Master.nameLast, Master.nameGiven 
+                                            HAVING sum(Pitching.SO) >= 3000
+                                            Order BY sum(Pitching.SO) desc, sum(Pitching.W) desc 
+                                            Limit 3")
+```
+
+```{r}
+top_3_pitchers
+```
+
+```{r}
+data.m <- melt(top_3_pitchers, id.vars='Name')
+
+# plot everything
+ggplot(data.m, aes(Name, value)) +   
+  geom_bar(aes(fill = variable), position = "dodge", stat="identity")+
+geom_text(aes(label=value), vjust=1.6, hjust=-.25, color="blue",
+            position = position_dodge(1.0), size=3.5)
+  
+
+
 ```
 

@@ -6,5 +6,5 @@ server: rpubs.com
 hostUrl: rpubs.com
 appId: https://api.rpubs.com/api/v1/document/418332/e9c51a0220b640b4a1fc6230dc54dcc9
 bundleId: https://api.rpubs.com/api/v1/document/418332/e9c51a0220b640b4a1fc6230dc54dcc9
-url: http://rpubs.com/publish/claim/418332/20774398e46d4dbcba706a73ddc9a66b
-when: 1536540884.16771
+url: http://rpubs.com/jkhancock/418332
+when: 1536637247.54386
