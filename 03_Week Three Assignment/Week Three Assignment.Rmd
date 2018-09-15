@@ -1,0 +1,129 @@
+---
+title: "Week Three Assignment"
+author: "John K. Hancock"
+date: "September 14, 2018"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+library(stringr)
+```
+
+3. Copy the introductory example. The vector name stores the extracted names.
+(a) Use the tools of this chapter to rearrange the vector so that all elements conform to
+the standard first_name last_name.
+
+```{r}
+raw.data <- "555-1239Moe Szyslak(636) 555-0113Burns, C. Montgomery555-6542Rev. Timothy Lovejoy555 8904Ned Flanders636-555-3226Simpson, Homer5543642Dr. Julius Hibbert"
+```
+
+```{r}
+name <- unlist(str_extract_all(raw.data, "[[:alpha:]., ]{2,}"))
+name
+```
+
+```{r}
+##Use str_detect to locate names with a comma.
+name[which(name %in%  name[str_detect(name, ",")])]
+```
+
+```{r}
+#Function that detects commas.  Then splits the string into arrays.  Returns concatenated string in order of first name and last name.
+convert_names <- function(name){
+    
+    if(str_detect(name, ",")==TRUE){
+        fullname <- str_split(name, ", ")
+        LastName <-fullname[[1]][1]
+        FirstName <- fullname[[1]][2]
+        newName <- str_c(FirstName, " ", LastName)
+        return(newName)
+    }else
+        return(name)
+    
+    }
+    
+```
+
+```{r}
+#Applies the function to each element in the vector
+for (i in seq_along(name)){
+    name[i] <- convert_names(name[i])
+    
+    }
+    
+```
+
+```{r}
+name
+```
+
+3(b) Construct a logical vector indicating whether a character has a title (i.e., Rev. and Dr.).
+
+
+```{r}
+#Use str_dectect to find titles
+logical_name <- str_detect(name, "Dr.|Rev.|Mayor|Father|Reverend|Doctor")
+logical_name
+```
+
+3(c) Construct a logical vector indicating whether a character has a second name.
+```{r}
+#Remove the strings and the punctuation, and trim the whitespace to get rid of titles.
+name2 <- str_trim(str_replace(name, pattern = "([[:alpha:]]{1,3}[[:punct:]])", replacement = ""))
+#Create logical vector by counting the number of words.  If equals to 2, then each name has a second name. 
+name3 <- str_count(name2, "\\w+") == 2
+
+name3
+
+```
+
+
+4. Describe the types of strings that conform to the following regular expressions and
+construct an example that is matched by the regular expression.
+
+(a) [0-9]+\\$
+Looks for any number from zero to nine.  The "+" sign means that the preceding numbers have to be matched one or more times.  The "\\" is an escape for the "$" which means to treat it as a literal, not a metacharacter. Will extract any number with a dollar sign at the end, but not all numbers
+
+```{r}
+text <- "At least 20 currencies express money with a dollar sign at the end like so, 500$."
+unlist(str_extract_all(text, "[0-9]+\\$"))
+```
+
+(b) \\b[a-z]{1,4}\\b
+Looks at the boundaries of a word and matches where the word is in lower case characters and any where between 1 and 4 characters long. 
+```{r}
+text2 <- "The diretory on your computer to find the files is your home directory but be careful."
+unlist(str_extract_all(text2, "\\b[a-z]{1,4}\\b"))
+```
+
+(c) .*?\\.txt$
+The period tells us that it will matches any character. The asterisk says that it can be matched zero or more times. The question mark says that the preceding character will be optional. The "\\." with "txt" means to look for a match ending with txt.  The "$" match must occur before the end of the line. In sum, this is used to find file extensions for text files but it won't return any text beyond the string, ".txt". 
+```{r}
+files  <- "A Presentation.txt"
+unlist(str_extract_all(files, ".*?\\.txt$"))
+```
+
+(d) \\d{2}/\\d{2}/\\d{4}
+The "\\d{2}" looks for a numerical 2 digit number followed by the literal, "/", followed by another 2 digit number, followed by the literal, "/", finally for a 4 digit number. This will return a date in the format, "00/00/0000".
+
+```{r}
+date <- "Today's date is 09/16/1964."
+unlist(str_extract_all(date, "\\d{2}/\\d{2}/\\d{4}"))
+
+```
+
+
+
+(e) <(.+?)>.+?</\\1>
+The "<" and ">" are literals. Within these two literal, the pattern, "(.+?)",  will look for the shortest string between these two literals. The next pattern ".+?" looks for the shortest string before a match. It is a reluctant quantifier. Inside the literals, "</" and ">", the pattern, "\\1", matches what was searched for before.  This is used to find text between xml or html tags.
+
+```{r}
+tags <- c('<bbbb>Bold Text</bbbb>', '<ul>underline</ul>', '<i>italics</i>', '<xml>xml tag</xml>')
+unlist(str_extract(tags,"<(.+?)>.+?</\\1>"))
+
+```
+
