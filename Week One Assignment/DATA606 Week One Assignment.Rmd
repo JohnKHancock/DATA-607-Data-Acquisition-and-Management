@@ -17,6 +17,7 @@ setwd('C:/Users/jkhan/Documents/CUNY/Fall 2018/DATA606/Week One due 09-02-2018')
 library(XML)
 library(httr)
 library(curl)
+library(RCurl)
 library(stringr)
 ```
 ### Use Curl to download the data to a csv file.  Read the csv file into a dataframe.

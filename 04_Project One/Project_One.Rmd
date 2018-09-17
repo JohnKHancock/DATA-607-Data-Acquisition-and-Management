@@ -1,0 +1,41 @@
+---
+title: "Project_One"
+author: "John K. Hancock"
+date: "September 15, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+options(warn=-1)
+library(XML)
+library(httr)
+library(curl)
+library(RCurl)
+library(stringr)
+library(tm)
+```
+
+```{r}
+txt<- character()
+txt <- c(txt, readLines('tournamentinfo.txt'))
+txt <- str_c(txt, collapse = "\n")
+txt_parsed <-unlist(str_split(txt, "-----------------------------------------------------------------------------------------"))
+txt_parsed<-str_replace(txt_parsed,pattern="^\n","")
+txt_parsed<-str_replace(txt_parsed,pattern="\n$","")
+txt_parsed<-str_replace(txt_parsed," \n Num  ","Num")
+txt_parsed<-str_replace(txt_parsed," / R:","|")
+txt_parsed<-str_replace(txt_parsed,"USCF ID / Rtg ", "USCF ID|Rtg")
+txt_parsed<-str_replace(txt_parsed,"->","|")
+txt_parsed<-str_replace(txt_parsed,"Rtg\\(Pre|Post\\)", "Rating Prior|Rating Post")
+txt_parsed<-str_replace(txt_parsed,"Post\\)", "")
+txt_parsed<-str_replace(txt_parsed,"\n","")
+txt_parsed<-txt_parsed[txt_parsed != ""]
+txt_parsed[2]
+str_locate_all(txt_parsed[2], "\\|")
+str_sub(txt_parsed[2],90,95)
+```
+
