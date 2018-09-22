@@ -17,7 +17,14 @@ library(curl)
 library(RCurl)
 library(stringr)
 library(tm)
+library(sm)
 ```
+
+####DATA607 Fall 2018  - PROJECT ONE
+####John K. Hancock
+
+1. Read in the text file, collapse it as one large block of text, unlist and parse it into a vector using str_split, and go through a series of replace statements to search for strings and replace them.
+
 
 ```{r}
 txt<- character()
@@ -34,8 +41,180 @@ txt_parsed<-str_replace(txt_parsed,"Rtg\\(Pre|Post\\)", "Rating Prior|Rating Pos
 txt_parsed<-str_replace(txt_parsed,"Post\\)", "")
 txt_parsed<-str_replace(txt_parsed,"\n","")
 txt_parsed<-txt_parsed[txt_parsed != ""]
+
+
+```
+
+2. The first line below shows the second element in the txt_parsed vector.  The next statement locates the coordinates for  where all of the "|" delimiters are located. 
+
+```{r}
 txt_parsed[2]
 str_locate_all(txt_parsed[2], "\\|")
-str_sub(txt_parsed[2],90,95)
 ```
+
+3. With the coordinates of the "|", the next step is to extract the data into individual vectors, player_id, player_name, player_state, total_no_of_points, and player_pre_rating.  The vector, player_opp, contains the player_ids for a player's opponent.  The vector black_white contains each instance of whether the player's chess pieces were Black or White. 
+
+
+
+```{r}
+player_id <- trimws(str_sub(txt_parsed[2:65],0,6))
+player_name<- trimws(str_sub(txt_parsed[2:65],8,40))
+player_state<- trimws(str_sub(txt_parsed[2:65],90,95))
+total_no_of_points<-trimws(str_sub(txt_parsed[2:65],42,46))
+player_pre_rating<-str_replace(trimws(str_sub(txt_parsed[2:65],107,114)),"P.*$","") 
+player_opp<-trimws(str_sub(txt_parsed[2:65],48,88))
+black_white <- trimws(str_sub(txt_parsed[2:65],132,168))
+```
+
+```{r}
+player_id<-as.numeric(player_id)
+player_id
+```
+
+
+
+
+
+```{r}
+player_name
+```
+
+```{r}
+player_state
+```
+
+```{r}
+total_no_of_points<-as.numeric(total_no_of_points)
+total_no_of_points
+```
+
+```{r}
+player_pre_rating<-as.numeric(player_pre_rating)
+player_pre_rating
+```
+
+4. The vectors player_id, player_name, player_state, total_no_of_points, and player_pre_rating were combined into a data frame. 
+
+
+
+```{r}
+
+df = data.frame(player_id,player_name,player_state,total_no_of_points,player_pre_rating)
+df
+```
+
+5. In the next block, I created a test to calculate the Average Pre Chess Rating of Opponents. This is done by extracting the player_ids of opponents by searching for only 1 to 2 digits in the string.  Next these were added to a numeric vector.  With the player_ids, I created a temporary data frame for a player's opponent by subsetting records for only the opponents.  Finally, by taking the mean of these players, I have each the Average Pre Chess Rating of Opponents. 
+
+
+```{r}
+test<- unlist(str_extract_all(player_opp[1],"[:digit:]{1,2}"))
+test <- as.numeric(test)
+temp<- df[df$player_id %in% test,]
+mean(temp$player_pre_rating)
+
+```
+
+5a. With a successful test, I created a for loop which calculates the Average Pre Chess Rating of Opponents for all of the playerrs, and then adding that vector to the data frame. 
+
+
+
+```{r}
+opponent_avg <- vector(mode="numeric")
+
+for (i in seq(1,length(player_opp)))
+{
+	
+	test<- unlist(str_extract_all(player_opp[i],"[:digit:]{1,2}"))
+	test <- as.numeric(test)
+	temp<- df[df$player_id %in% test,]
+	opponent_avg<-append(opponent_avg, mean(temp$player_pre_rating))
+}
+
+opponent_avg
+
+
+
+
+```
+
+```{r}
+df$avg_pre_chess_rating_of_opponents<-c(opponent_avg)
+```
+
+
+```{r}
+df
+```
+
+6. I went a step further.  I wanted to know how many Wins, Losses, Draws, U's, and H's that a player has.  Additionally, I wanted to count the number of times a player has played with Black or White chess pieces. Using extract all on player_opp and black_white to search for "W","L","D","U", and "H" and putting these values are put into vectors, I was able to count the length of each vector to calculate the number of Wins, Losses, Draws, Us, and Hs.  I took the same approach to count the number of times a player played with either Black or White pieces. 
+
+
+
+```{r}
+countofWins<- vector(mode="numeric")
+countofLosses<-vector(mode="numeric")
+countofDraws <-vector(mode="numeric")
+countofU <-vector(mode="numeric")
+countofH <-vector(mode="numeric")
+countofWhite <-vector(mode="numeric")
+countofBlack <- vector(mode="numeric")
+
+for (i in seq(1,length(player_opp)))
+{
+		
+	wins<- unlist(str_extract_all(player_opp[i],"[W]"))
+	countofWins<-append(countofWins,length(wins))
+	
+	losses <- unlist(str_extract_all(player_opp[i],"[L]"))
+	countofLosses<-append(countofLosses,length(losses))
+	
+	draws <- unlist(str_extract_all(player_opp[i],"[D]"))
+	countofDraws<-append(countofDraws,length(draws))
+	
+	U <- unlist(str_extract_all(player_opp[i],"[U]"))
+	countofU<-append(countofU,length(U))
+	
+	H<-unlist(str_extract_all(player_opp[i],"[H]"))
+	countofH<-append(countofH,length(H))
+	
+	WHite<-unlist(str_extract_all(black_white[i],"[W]"))
+	countofWhite<-append(countofWhite,length(WHite))
+	
+	Black<-unlist(str_extract_all(black_white[i],"[B]"))
+	countofBlack<-append(countofBlack,length(Black))
+}
+
+
+```
+
+7. These values were added to the data frame. 
+
+
+```{r}
+df$Wins <- countofWins
+df$Losses <- countofLosses
+df$Draws <- countofDraws 
+df$U <- countofU 
+df$H <- countofH
+df$White<- countofWhite
+df$Black<-countofBlack
+df
+
+```
+
+
+```{r}
+summary(df)
+```
+8. Finally, write the results to a csv file for loading into a database.
+
+
+```{r}
+write.csv(df, file = "Chess Tournament Results.csv", row.names = FALSE)
+```
+
+
+
+
+
 
