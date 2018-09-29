@@ -1,0 +1,70 @@
+---
+title: "tidyr_demo"
+author: "John K. Hancock"
+date: "September 22, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+devtools::install_github("rstudio/EDAWR")
+```
+```{r}
+library(EDAWR)
+library(tidyr)
+library(dplyr)
+library(nycflights13)
+
+```
+
+```{r}
+cases
+```
+
+```{r}
+storms
+```
+
+```{r}
+pollution
+
+```
+
+```{r}
+gather(cases, "year", "n", 2:4)
+```
+
+```{r}
+spread(pollution, size, amount)
+```
+
+```{r}
+separate(storms, date, c("year", "month", "day"), sep="-")
+```
+
+```{r}
+select(storms, pressure, wind)
+%>% 
+```
+
+```{r}
+pollution %>% group_by(city) %>% summarise(mean=mean(amount), variance=var(amount), sd=sd(amount), n=n())
+```
+
+```{r}
+tb %>% 
+	group_by(country, year) %>% 
+	summarise(child=sum(child)) %>% 
+	summarise(child=sum(child))
+	
+
+```
+
+```{r}
+
+```
+

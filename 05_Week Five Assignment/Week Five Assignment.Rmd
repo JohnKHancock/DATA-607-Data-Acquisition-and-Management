@@ -1,0 +1,129 @@
+---
+title: "Week Five Assignment"
+author: "John K. Hancock"
+date: "September 24, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=FALSE}
+library(dplyr)
+library(tidyr)
+library(viridisLite)
+library(ggplot2)
+```
+
+# DATA607 Fall 2018 Week Five - Tidying and Transforming Data
+
+##Introduction
+
+The task for this week's assignment is to create and read in untidy data displaying arrival times for two airlines for five different cities.  After reading in the data, it has to be transformed into a tidy format where analysis can be performed to compare the arrival times for each airline. 
+
+## Principles of Tidy Data
+I.   Observations are represented as rows. 
+II.  Variables are represented as columns. 
+III. One type of observation per unit table. A dataset is a collection of values
+IV.  Each value is an intersection between an observation and a variable. Variables measures the same value across units. 
+V.   An observation contains all values measured across all units. 
+
+Messy data columns are variables not values. Data is in a wide format when you have more columns than rows. 
+
+##Read in the Flights Information dataset.
+
+```{r}
+flights<-read.csv('FlightInformation.csv')
+
+```
+
+```{r}
+head(flights,25)
+```
+##Analysis Part One:
+The dataset clearly violates the principles of Tidy data.  The columns for the cities are values rather than variables. Data for Status is duplicated and needs to be spread.
+
+##Tidying:
+The code below creates a flights2 table from the original flights table and uses the pipe operator to string together each line of code.  First, the gather function converts the aforementioned cities columns into one column containing a city, Additionally, the number of flights per city is captured in a new Flight_Count column. This is in keeping with principle II of tidy data where variables, not values are represented as columns.
+
+Next, using the dplyr select function to select the Airline, Status, City, and Flight_Count, data from the Status and Flight_Count columns is spread to two new columns, delayed and OnTime. The end result is to get to principle V of tidy data: "V.   An observation contains all values measured across all units. "
+
+
+```{r}
+flights2 <- flights %>% 
+gather(City,Flight_Count,3:7) %>% 
+select(Airline, Status,City,Flight_Count) %>% 
+spread(Status,Flight_Count)
+
+names(flights2)[4]<- "OnTime" 
+
+
+flights2
+```
+
+Now that we have a dataset where a single obersvation contains all values measured across all units, Airline, City, Delayed, and OnTime. The name for OnTime had to be changed for the next section.
+
+##Analysis Part Two:
+Using dplyr functions, the number of total flights, the percentage delayed and OnTime, and the difference between the OnTime and delayed percentages are added to the flights2 dataset.
+
+```{r}
+flights2<-flights2 %>% 
+mutate(Total_Flights = delayed+OnTime) %>%      
+mutate(Delayed_PCT = delayed/Total_Flights)%>% 
+mutate(OnTime_PCT = OnTime/Total_Flights)%>% 
+mutate(Diff = OnTime_PCT - Delayed_PCT)
+
+flights2
+
+
+```
+Looking at delayed and OnTime raw numbers alone may not give the best insight into the data whereas the percentages give better insight and comparison between the two airlines.
+
+```{r}
+filter(flights2, Diff== min(Diff) | Diff==max(Diff))
+```
+For example, when looking at the minimum difference between OnTime/delayed percentages, we see that AM West to San Francisco has the smallest difference between being OnTime and Delayed.  IOW, this AM West route to San Francisco has the highest delayed flights for any other airline on any other routes to the four citites.  While the Alaska airlines route to Phoenix has the best OnTime performance for any other airline on any other routes.
+
+
+```{r}
+summarise(flights2,Avg_Delay = mean(Delayed_PCT), 
+              Variance = var(Delayed_PCT),
+              Standard_Deviation = sd(Delayed_PCT))
+```
+For all Airlines, the average percentage of delayed flights is 15%. 
+
+```{r}
+flights2 %>% 
+    group_by(Airline) %>% 
+    summarise(Avg_Delay = mean(Delayed_PCT), 
+              Variance = var(Delayed_PCT),
+              Standard_Deviation = sd(Delayed_PCT))
+```
+When the average delayed is broken down by airline, we see that not only does AM West have higher average delays than Alaska, it also is higher than the average for both airlines. 
+
+```{r}
+flights2 %>% 
+    group_by(City) %>% 
+    summarise(Avg_Delay_Flights = mean(delayed), 
+              Avg_Delay_Flights_by_PCT = mean(Delayed_PCT))
+```
+Finally, to confirm that percentages present a better insight than the raw numbers, we see that Seattle has a higher number of delayed flights, but in the context of the total number of flights per city, we see that San Francisco has the higher percentage of delayed flights.  IOW, there's a 23% chance that a flight into San Francisco will be delayed while there's an 19% chance of a flight into Seattle will be delayed. 
+
+
+##Conclusion:
+After tidying the data and doing an analysis we can clearly see that AM West airline has significantly more delays than does Alaska ariline. Converting the raw numbers to percentages allowed us to make better comparisons. The graphs below also support the conclusion. For each city, we see that AM West has a higher percentage of delayed flights over Alaska airlines.
+
+```{r}
+ggplot(flights2, aes(fill=City, y=Delayed_PCT, x=Airline)) + 
+    geom_bar(position="dodge", stat="identity") +
+    ggtitle("Comparison of Delayed Percentages between AM West and Alaska")
+
+```
+
+```{r}
+ggplot(flights2, aes(fill=City, y=OnTime_PCT, x=Airline)) + 
+    geom_bar(position="dodge", stat="identity")+
+    ggtitle("Comparison of On Time Percentages between AM West and Alaska")
+```
+

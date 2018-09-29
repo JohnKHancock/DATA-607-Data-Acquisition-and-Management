@@ -1,0 +1,41 @@
+---
+title: "Project Three"
+author: "John K. Hancock"
+date: "September 24, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+library(rvest)
+library(stringr)
+library(dplyr)
+library(ggplot2)
+```
+```{r}
+job_title <- 'data+scientist'
+location <- "New+York+State#"
+```
+
+https://www.indeed.com/jobs?q=data+scientist&l=New+York+State#
+
+
+
+```{r}
+BASE_URL <- 'https://www.indeed.com'
+ADV_URL <- paste0('https://www.indeed.com/jobs?q=', job_title, '&l=',location )
+cat(ADV_URL)
+```
+
+```{r}
+start_page <- read_html(ADV_URL)
+job_count <- unlist(strsplit(start_page %>% 
+                               html_node("#searchCount") %>%
+                               html_text(), split = ' ')) 
+job_count <- as.numeric(str_replace_all(job_count[length(job_count)],',',''))
+cat('Total job count: ', job_count)
+
+```
+
