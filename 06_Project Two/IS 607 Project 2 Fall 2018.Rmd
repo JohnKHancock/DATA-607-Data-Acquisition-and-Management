@@ -1,0 +1,416 @@
+---
+title: "Project Two"
+author: "John K. Hancock"
+date: "September 30, 2018"
+output: html_document
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, include=FALSE}
+library(rvest)
+library(dplyr)
+library(tidyr)
+library(viridisLite)
+library(ggplot2)
+library(stringr)
+library(lubridate)
+library(GENEAread)
+
+```
+
+
+
+
+#IS 607 - Project 2 - Preparing Different Datasets for Downstream Analysis
+
+###I. Introduction
+
+The goal of this project was to select three untidy datasets posted in the discussion forum and prepare them for analysis.  I chose the following data sets:
+
+1. Coaches who have won the World Cup -  posted by Joseph Garcia.
+2. List of Grand Slam men's singles champions - posted by Peter Kowalchuk
+3. Chicago Homicides 2018 - posted by John K. Hancock
+
+For each post, I discuss the issues with the dataset, propose the plan to tidy the data, execute the plan, and reflect on the final dataset.
+
+###II. Datasets and Analysis
+
+####1. Coaches who have won the World Cup  - posted by Joseph Garcia post
+
+#####1a. Discussion
+
+The data in a table on a wikipedia entry about FIFA World Cup Winners. After scraping the table from the site, we can see how the data is untidy Some columns have two different values.  For example, Years_Won has both the year and an abbreviated name of the country. Columns for "Other_Appearances_as_Coach" and "Other_Appearances_as_Player" have multiple entries as well. 
+
+
+```{r}
+url1 <- 'https://en.wikipedia.org/wiki/List_of_FIFA_World_Cup_winners'
+
+coaches<- url1  %>% 
+  read_html() %>%
+  html_nodes(xpath = '//*[@id="mw-content-text"]/div/table[4]') %>% 
+  html_table(fill = TRUE)
+
+coaches <- coaches[[1]]
+
+
+coaches <- as.data.frame(coaches)
+
+coaches$T <- NULL 
+coaches <- coaches[-1,]
+
+names(coaches)[2:5] <- c('Champion_Country','Years_Won','Other_Appearances_as_Coach', 'Other_Appearances_as_Player')
+
+
+coaches<- tbl_df(coaches)
+head(coaches, 10)
+
+```
+
+#####1b. The Plan
+The plan is to create six variables:
+1. Championship Year
+2. Last_Name of the coach
+3. First_name of the coach
+4. Champion_Country (Full name)
+5. Number of other appearances by the coach as a coach
+6. Number of other appearance as a player
+
+#####1c. Execution
+The block below creates the coaches1 data frame which separates the coach name into last name, first name variables, and parses the Championship year and country into their own variables. 
+```{r}
+coaches1<-coaches %>%
+  mutate(Years_Won=strsplit(as.character(Years_Won), ", ")) %>% 
+  unnest(Years_Won) %>% 
+  separate(Years_Won, c("Championship_Year", "Country2")) %>% 
+  select(Championship_Year, Coach, Champion_Country) %>% 
+  separate(Coach, c("First_Name", "Last_Name"), extra = "merge", fill = "right")
+
+```
+
+The block below creates the coaches2 and 2a data frames which separates out Other Appearances into their own variables and counts the number of other appearances as a coach. 
+
+
+```{r}
+coaches2<-coaches %>%
+  mutate(Other_Appearances_as_Coach=strsplit(as.character(Other_Appearances_as_Coach), ", ")) %>% 
+  unnest(Other_Appearances_as_Coach) %>% 
+  separate(Other_Appearances_as_Coach, c("Other_Appearance_as_Coach_Year", "Representing_Country_Coach")) %>%
+  separate(Coach, c("First_Name", "Last_Name"), extra = "merge", fill = "right") %>% 
+  select(Other_Appearance_as_Coach_Year, Last_Name,  Representing_Country_Coach)
+
+
+coaches2a<-coaches2 %>%
+    group_by(Last_Name) %>%
+    summarise("No_of_Other_Appearances_as_Coach" = n())
+              
+
+```
+
+The block below creates the coaches3 data frame which separates out Other Appearances into their own variables and counts the number of other appearances as a player.
+
+```{r}
+coaches3 <- coaches %>% 
+  mutate(Other_Appearances_as_Player=strsplit(as.character(Other_Appearances_as_Player), ", ")) %>% 
+  unnest(Other_Appearances_as_Player) %>% 
+  separate(Coach, c("First_Name", "Last_Name"), extra = "merge", fill = "right") %>%
+  select(Other_Appearances_as_Player, Last_Name)
+
+coaches3a<-coaches3 %>%
+    group_by(Last_Name) %>%
+    summarise("No_of_Other_Appearances_as_Player" = n())
+
+```
+
+Data frames coaches 2a and coaches 3a are merged into the coaches data frame to create the FINAL_COACHES_DF data frame. 
+
+```{r}
+coaches4 <-merge(coaches1,coaches2a,by="Last_Name",all.x = TRUE)
+coaches4 <-merge(coaches4,coaches3a,by="Last_Name", all.x = TRUE)
+
+coaches4[is.na(coaches4)] <-0
+
+FINAL_COACHES_DF <- coaches4 %>% 
+    select(Championship_Year,Last_Name,First_Name,Champion_Country,No_of_Other_Appearances_as_Coach,No_of_Other_Appearances_as_Player) %>% 
+    arrange(Championship_Year)
+
+
+FINAL_COACHES_DF 
+    
+```
+#####1d. Reflection
+
+The data is now in a tidy format and is ready for analysis and questions such as:
+
+what's the total number of other appearances as a coach for championship coaches?
+
+```{r}
+sum(FINAL_COACHES_DF$No_of_Other_Appearances_as_Coach)
+```
+
+what's the total number of other appearances as a player for championship coaches?
+
+```{r}
+sum(FINAL_COACHES_DF$No_of_Other_Appearances_as_Player)
+```
+
+Show the countries and number of World championships?
+
+
+```{r}
+FINAL_COACHES_DF %>% 
+    group_by(Champion_Country) %>% 
+    summarise(Champion = n()) %>% 
+    arrange(desc(Champion))
+```
+
+
+
+
+####2.List of Grand Slam men's singles champions - posted by Peter Kowalchuk
+
+#####2a. Discussion
+
+The data is in wide format. Iformation about the number of Grand Slam ("GS") tournaments won at the time and total number of GS tournament won is in parenthesis. For example, "Don Budge (1/6)". Also, for the name of the champion, there are other entries other than names.  For example,"started in 1891" or "France held under German occupation***" or "tournament not created".  These kind of entries make it difficult for analysis because they have to be accounted for when running the analysis. 
+
+```{r}
+url2 <- 'https://en.wikipedia.org/wiki/List_of_Grand_Slam_men%27s_singles_champions'
+
+grand_slam<- url2 %>% 
+    read_html() %>% 
+    html_nodes(xpath = '//*[@id="mw-content-text"]/div/table[1]') %>% 
+    html_table(fill = TRUE)
+
+grand_slam <- grand_slam[[1]]
+
+grand_slam <- as.data.frame(grand_slam)
+
+head(grand_slam,10)
+
+```
+#####2b. The Plan accoring to Peter Kowalchuk
+
+1. Set our columns to: Year, Tournament Name, Player Name. 
+2. Add another column with the player's country, and another with the tournaments location. 
+3. Another column that might be added is an identifier for the kind of tournament,tournament type for example. This might show GS for the original tournaments in wiki, and maybe ATPM for ATP Masters, EX for exhibition games, and so on.
+
+I added:
+4. Parse out the tournament won at the time and total tournaments won into their own variables. Use regular expressions to parse out the data, transform it to numeric data, and replace the NAs with 0 for those years without a champion.
+5. For Mens_Champion, if there was no winner for whatever reason, change it None. 
+6. For country of champion, use full country's name, not just the three letter abbreviation.
+7. Add a column for the reason why there was no champion that particular year. 
+
+#####2c. The following code below executes the plan outlined above. 
+
+```{r}
+grand_slam2<- grand_slam %>% 
+gather(Tournament_Name,Mens_Champion,-Year) %>% 
+    mutate(Tournament_Type="Grand Slam", Country_of_Tournament="") %>% 
+    separate(Mens_Champion, c('Country_of_Champion','Mens_Champion'), sep=":", extra = "merge", fill="left")
+    
+
+grand_slam2<-grand_slam2 %>%
+    mutate(Country_of_Tournament = case_when(Tournament_Name == 'Australian Open'  ~ "Australia",  Tournament_Name == 'French Open' ~ "France",
+                            Tournament_Name == 'Wimbledon' ~ "England", Tournament_Name == "US Open" ~ "United States", TRUE ~ Country_of_Tournament)) %>% 
+mutate(Country_of_Champion = case_when(Country_of_Champion=='AUS'~'Australia',
+Country_of_Champion=='NZL'~'New Zealand',
+Country_of_Champion=='PER'~'Peru',
+Country_of_Champion=='RSA'~'Republic of South Africa',
+Country_of_Champion=='GER'~'Germany',
+Country_of_Champion=='CZE'~'Czech Republic',
+Country_of_Champion=='SRB'~'Serbia',
+Country_of_Champion=='FRA'~'France',
+Country_of_Champion=='HUN'~'Hungary',
+Country_of_Champion=='EGY'~'Egypt',
+Country_of_Champion=='SWE'~'Sweden',
+Country_of_Champion=='ITA'~'Italy',
+Country_of_Champion=='ESP'~'Spain',
+Country_of_Champion=='TCH'~'Czechoslovakia',
+Country_of_Champion=='ARG'~'Argentina',
+Country_of_Champion=='ECU'~'Ecuador',
+Country_of_Champion=='AUT'~'Austria',
+Country_of_Champion=='RUS'~'Russia',
+Country_of_Champion=='BRA'~'Brazil',
+Country_of_Champion=='GBR'~'Great Britain',
+Country_of_Champion=='FRG'~'West Germany',
+Country_of_Champion=='NED'~'Netherlands',
+Country_of_Champion=='SUI'~'Switzerland',
+Country_of_Champion=='USA'~'United States of America',
+Country_of_Champion=='MEX'~'Mexico',
+Country_of_Champion=='ROU'~'Romania', TRUE ~ Country_of_Champion)) %>% 
+mutate("No_Champion_Reason" = case_when(Mens_Champion=='started in 1905'~ Mens_Champion, 
+                                        Mens_Champion=="tournament not created"~ Mens_Champion,
+                                        Mens_Champion == "World War I" ~ Mens_Champion,
+                                        Mens_Champion == "World War II"~ Mens_Champion,
+                                        Mens_Champion ==  "Tournament canceled" ~ Mens_Champion,
+                                        Mens_Champion == "France held under German occupation***"~ Mens_Champion, 
+                                        Mens_Champion == "started in 1891"~ Mens_Champion,
+                                        Mens_Champion == "Tournament date changed"~ Mens_Champion,
+                                        Mens_Champion == "started in 1881"~ Mens_Champion,TRUE ~ 'See Champion')) %>% 
+    
+mutate(Mens_Champion = case_when(Mens_Champion=='started in 1905'~'None',
+                                 Mens_Champion=="tournament not created"~ 'None',
+                                 Mens_Champion == "World War I" ~ 'None',
+                                 Mens_Champion == "World War II"~ 'None',
+                                 Mens_Champion ==  "Tournament canceled" ~ 'None',
+                                 Mens_Champion == "France held under German occupation***"~ 'None', 
+                                 Mens_Champion == "started in 1891"~ 'None', 
+                                 Mens_Champion == "started in 1881"~ 'None',
+                                 Mens_Champion == 'Tournament date changed'~ 'None',
+                                 TRUE ~ Mens_Champion ))
+                                          
+                                       
+                                   
+```
+
+
+```{r}
+
+pattern = "\\([[:digit:]]{1,2}\\/[[:digit:]]{1,2}\\)"
+pattern2 = "[()]"
+pattern3 = "[^[:alpha:][:space:]]"
+
+grand_slam3 <- grand_slam2 %>% 
+    mutate(Championships=gsub(pattern2, "", str_extract(grand_slam2$Mens_Champion, pattern))) %>% 
+    separate(Championships,c("GS_Championships_Won_at_the_Time", "Total_GS_Won"), sep="/") 
+    
+
+grand_slam3$GS_Championships_Won_at_the_Time[is.na(grand_slam3$GS_Championships_Won_at_the_Time) & grand_slam3$Mens_Champion != 'None'] <- 1
+
+grand_slam3$Total_GS_Won[is.na(grand_slam3$Total_GS_Won) & grand_slam3$Mens_Champion != 'None'] <- 1
+
+grand_slam3$Mens_Champion<-str_trim(gsub(pattern3, "", grand_slam3$Mens_Champion))
+
+grand_slam3$GS_Championships_Won_at_the_Time <- as.numeric(grand_slam3$GS_Championships_Won_at_the_Time)
+
+grand_slam3$Total_GS_Won <- as.numeric(grand_slam3$Total_GS_Won)
+
+grand_slam3$Total_GS_Won[is.na(grand_slam3$Total_GS_Won)] <- 0
+
+grand_slam3$GS_Championships_Won_at_the_Time[is.na(grand_slam3$GS_Championships_Won_at_the_Time)] <- 0
+
+grand_slam_final <- arrange(grand_slam3, Year)
+```
+
+
+#####2d. Reflection
+
+1. The Country_of_Champion variable was not consistently recorded.  For some entries, the player's country had an abbreviation before the name like so, "GER: Gottfried von Cramm", but this was not consistent with other players.  One future correction would be to update that variable.
+
+2. I debated on whether to keep in records without a champion entry or not. Keeping in data for those years where there was no champion may not be good for analysis.  In the end, I left those records in since they do offer addtional information and be can easily removed. 
+
+3. The data is now in a tidy format available for analysis:
+
+What mens player has won the most Grand Slam tennis titles?
+```{r}
+grand_slam_final %>% 
+    filter( GS_Championships_Won_at_the_Time == max(GS_Championships_Won_at_the_Time)) %>% 
+    select(Mens_Champion, Total_GS_Won)
+
+
+
+```
+
+What mens player has won the most Grand Slam tennis titles per tournament?
+
+
+```{r}
+grand_slam_final %>%
+    filter(Mens_Champion != 'None') %>% 
+    group_by(Tournament_Name) %>%
+    add_count(Mens_Champion) %>%
+    select(Tournament_Name, Mens_Champion,n) %>% 
+    filter(n==max(n)) %>% 
+    arrange(Tournament_Name) %>% 
+    distinct()
+              
+```
+
+
+#####3.Chicago Homicides 2018. Posted by John K. Hancock
+
+####3a. Discussion
+
+This dataset was exported from the website Chicago Data Portal ([link](https://data.cityofchicago.org/Public-Safety/Crimes-2001-to-present/ijzp-q8t2/data))
+The site tracks crime statistics from 2001 to the present.  For this project, I exported Homicide statistics for 2018. The data has a lot of duplicative variables which can be removed for analysis purposes.    
+
+```{r}
+Chicago_Homicides_2018<- read.csv('Chicago Homicides 2018.csv')
+
+Chicago_Homicides_2018$Date <- mdy_hms(Chicago_Homicides_2018$Date)
+
+head(Chicago_Homicides_2018,10)
+```
+
+####3b. Plan
+
+
+1. Separate the Date field into Date and Time.  By doing this we can get better analysis as to when Homicides are most likely to occur.
+2. Remove Unneccsary and redundant columns ID, Location, X.Coordinate, Y.Coordinate, Primary.Type, IUCR, Year, Updated.On, and FBI.Code
+3. Remove the house information from the Block variable.
+4. Replace the "true/false" values in the Arrest and Domestic variables to avoid confusion.
+5. Add a column that tallies the number of Homicides on each block.
+
+
+####3c. Execution
+```{r}
+
+
+Chicago_Homicides_2018_01<-Chicago_Homicides_2018 %>% 
+    select(Case.Number, Date, Block, Description, Location.Description, Arrest, Domestic, Beat, District, Ward, Latitude, Longitude) %>% 
+    arrange(Date)
+
+```
+
+
+
+```{r}
+pattern4 = "^[[:digit:]]{1,3}[[Xx]]{1,3}"
+
+Chicago_Homicides_2018_01$Block<-str_trim(str_replace_all(Chicago_Homicides_2018_01$Block,pattern4,""))
+
+Chicago_Homicides_2018_01$Arrest <- str_replace(Chicago_Homicides_2018_01$Arrest, "false", "No")
+Chicago_Homicides_2018_01$Arrest <- str_replace(Chicago_Homicides_2018_01$Arrest, "true", "Yes")
+Chicago_Homicides_2018_01$Domestic <- str_replace(Chicago_Homicides_2018_01$Domestic, "false", "No")
+Chicago_Homicides_2018_01$Domestic <- str_replace(Chicago_Homicides_2018_01$Domestic, "true", "Yes")
+
+
+
+```
+
+
+```{r}
+Chicago_Homicides_2018_01<-Chicago_Homicides_2018_01 %>% 
+    add_count(Block) 
+   
+
+
+    
+```
+
+```{r}
+names(Chicago_Homicides_2018_01)[13] <- c('No_of_Homicides_on_Block')
+Chicago_Homicides_2018_01 
+```
+
+####3d. Reflections
+
+1. I had to convert the Date Time variable from character data to a date field. 
+2. I had to scrap my original plan to separate out the Date/Time due to the fact that doing so changes the Date field to a character field. 
+3. By removing the house number from the block, I was able to tally the number of Homcides on each block. By doing so, I can identify the block with the most number of Homcides so far this year. "S Paulina Street" has had six homicides so far this year. 
+
+```{r}
+Chicago_Homicides_2018_01 %>% 
+    filter(No_of_Homicides_on_Block == max(No_of_Homicides_on_Block))
+
+```
+4. By converting the Date field to a POSIXct variable, I was able to do a quick plot showing the number homicides per month this year so far.  
+```{r}
+months<-month(Chicago_Homicides_2018_01$Date, label = TRUE)
+plot(months)  
+```
+
+
