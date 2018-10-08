@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<data-set xmlns:xsi="http //www.w3.org/2001/XMLSchema - instance">
+	<record>
+		<Author>Reiss, Mike</Author>
+		<Title>Springfield Confidential, Jokes, Secrets, and Outright Lies from a Lifetime Writing for The Simpsons</Title>
+		<Genre>Comedy</Genre>
+		<Pages>320</Pages>
+		<Published>2018</Published>
+		<ISBN>62748033</ISBN>
+	</record>
+	<record>
+			<Author>Martin, George RR</Author>
+			<Title>A Storm of Swords</Title>
+			<Genre>Fantasy</Genre>
+			<Pages>973</Pages>
+			<Published>2000</Published>
+			<ISBN>0-553-10663-5</ISBN>
+	</record>
+</data-set>

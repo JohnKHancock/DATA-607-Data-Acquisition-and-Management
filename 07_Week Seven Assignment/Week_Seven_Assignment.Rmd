@@ -1,0 +1,54 @@
+---
+title: "DATA607 FALL 2018 Assignment - Working with XML and JSON in R"
+author: "John K. Hancock"
+date: "October 7, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#DATA607 - Week Seven Assignment - Working with XML and JSON in R
+
+Pick three of your favorite books on one of your favorite subjects. At least one of the books should have more than one author. For each book, include the title, authors, and two or three other attributes that you find interesting.
+Take the information that you've selected about these three books, and separately create three files which store the book's information in HTML (using an html table), XML, and JSON formats (e.g. "books.html", "books.xml", and "books.json"). 
+
+Write R code, using your packages of choice, to load the information from each of the three sources into separate R data frames. Are the three data frames identical?
+
+
+
+```{r}
+library("XML")
+library("methods")
+
+BooksXML <- xmlParse("Books.xml")
+
+rootnode <- xmlRoot(BooksXML)
+rootsize <-xmlSize(rootnode)
+
+BooksXML_df <- xmlToDataFrame("Books.xml")
+BooksXML_df
+
+```
+
+```{r messages=FALSE, warning=FALSE}
+library(rjson)
+BooksJson <- fromJSON(file="books.json", simplify = TRUE)
+BooksJson_df<- as.data.frame(BooksJson)
+
+BooksJson_df
+```
+
+```{r}
+BookHTML_df <- as.data.frame(readHTMLTable("Books.html"))
+names(BookHTML_df) <- c("Author", "Title", "Genre", "Pages", "Published", "ISBN")
+BookHTML_df 
+```
+
+Reflections:
+
+1. The three data frames are nearly identical except for the BooksJson_df which imported the Pages and Published variables as numeric whereas the other two data frames imported the data as factors.
+
+2. After importing the HTML table, column variable was prepended with "NULL." which I renamed. 
+
