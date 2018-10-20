@@ -7,35 +7,115 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+options(warn=-1)
 ```
-```{r}
+
+
+```{r, include=FALSE}
+library(tidyverse)  
 library(rvest)
 library(stringr)
 library(dplyr)
 library(ggplot2)
+library(rebus)
+library(lubridate)
+library(tm)
+library(purrr)
 ```
-```{r}
-job_title <- 'data+scientist'
-location <- "New+York+State#"
-```
 
-https://www.indeed.com/jobs?q=data+scientist&l=New+York+State#
+##LinkedIn Data Science Jobs
 
-
-
-```{r}
-BASE_URL <- 'https://www.indeed.com'
-ADV_URL <- paste0('https://www.indeed.com/jobs?q=', job_title, '&l=',location )
-cat(ADV_URL)
-```
+###Data webscraped by Chester Poon.  
 
 ```{r}
-start_page <- read_html(ADV_URL)
-job_count <- unlist(strsplit(start_page %>% 
-                               html_node("#searchCount") %>%
-                               html_text(), split = ' ')) 
-job_count <- as.numeric(str_replace_all(job_count[length(job_count)],',',''))
-cat('Total job count: ', job_count)
+LinkedIn_DSjobs <- read.csv("LinkedIn.csv", stringsAsFactors = FALSE)
+LinkedIn_DSjobs$skills<-str_trim( str_replace(LinkedIn_DSjobs$skills, "\\(Programming Language\\)", ""))
+```
+
+```{r}
+
+frequency<- count(LinkedIn_DSjobs, skills)
+top_Skills<- frequency[frequency$n > 0,]
+top_Skills[order(-top_Skills$n),] 
+```
+
+
+##Indeed Data Science Jobs
+
+###Data webscraped by John K Hancock. 
+
+```{r, options(warn=-1)}
+Indeed_DSjobs <- read.csv("Data_Science_Indeed_Jobs.csv", stringsAsFactors = FALSE, encoding = "UTF-8")
+Indeed_DSjobs$Description <- str_replace_all(Indeed_DSjobs$Description,"[\n]","")
+top_Skills_Indeed <- data.frame(skills=character(), n=integer())
 
 ```
+
+```{r}
+for (i in 1:nrow(top_Skills))
+{
+     newRow <- data.frame(skills=top_Skills$skills[i], 
+                          n=length(unlist(str_extract_all(Indeed_DSjobs$Description,top_Skills$skills[i]))))
+    top_Skills_Indeed <- rbind(top_Skills_Indeed, newRow)
+
+}
+top_Skills_Indeed$skills <- as.character(top_Skills_Indeed$skills)
+top_Skills_Indeed<-top_Skills_Indeed[!duplicated(top_Skills_Indeed),]
+```
+
+
+```{r}
+top_Skills_Indeed[order(-top_Skills_Indeed$n),]
+```
+
+
+
+
+
+##CareerBuilder Data Science Jobs
+
+###Data webscraped by Joshua Bentley. 
+
+```{r}
+CareerBuilder_DSjobs <- read.csv("careerbuilder (2).csv", encoding = "UTF-8")
+CareerBuilder_DSjobs$jobdesc <- str_replace_all(CareerBuilder_DSjobs$jobdesc,"[\n]","")
+top_Skills_CB <- data.frame(skills=character(), n=integer())
+
+```
+
+```{r}
+for (i in 1:nrow(top_Skills))
+{
+     newRow <- data.frame(skills=top_Skills$skills[i], 
+                          n=length(unlist(str_extract_all(CareerBuilder_DSjobs$jobdesc,top_Skills$skills[i]))))
+    top_Skills_CB<- rbind(top_Skills_CB, newRow)
+
+}
+```
+
+
+```{r}
+top_Skills_CB<-top_Skills_CB[!duplicated(top_Skills_CB), ]
+top_Skills_CB$skills<-as.character(top_Skills_CB$skills)
+top_Skills_CB[order(-top_Skills_CB$n),]
+```
+```{r}
+tables <- list(top_Skills,top_Skills_Indeed,top_Skills_CB)
+master_skills_df <- reduce(tables,left_join,by="skills")
+master_skills_df
+```
+
+```{r}
+master_skills_df$Total<- rowSums(master_skills_df[, c("n.x", "n.y", "n")], na.rm = TRUE)
+```
+
+```{r}
+colnames(master_skills_df) <- c("Skills", "Indeed", "CareerBuilder","LinkedIn", "Total")
+master_skills_df
+```
+
+```{r}
+write.csv(master_skills_df, file = "Master_Skills_List.csv")
+```
+
 
