@@ -451,12 +451,12 @@ tail(Top50_df_percentages,10)
 
 ```{r}
 Top6<- Top50_df[Top50_df$Total>556,]
-Top6<-Top5[order(-Top5$Total),]
+Top6<-Top6[order(-Top6$Total),]
 Top6
 ```
 
 ```{r}
-ggplot(data=Top5, aes(x=Skills, y=Total))+
+ggplot(data=Top6, aes(x=Skills, y=Total))+
     geom_bar(position="dodge",stat="identity",fill=c("orange")) + 
   coord_flip() +
   ggtitle("Top Six Most In Demand Data Science Skills")
