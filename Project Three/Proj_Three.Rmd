@@ -25,37 +25,20 @@ options(warn=-1)
 
 To answer that question, the Project Three team first met on September 13th via Google hangout to discuss an approach to the project.  In order to answer the question about highly valued data science skills, we had to go where there was data, and the most likely places were job search sites which would provide the data through job postings. At our meeting, We decided to research web APIs for the most popular job search websites, CareerBuilder, LinkedIn, Glassdoor, Monster, Indeed, Angelist, Upwork, Idealist, Hired, Dice, Fiverr, Zip Recruiter, Kaggle and others. 
 
-A week later, we came up empty in our search for APIs. Most of the sites restricted access to their API or require a partnership with the site. We then turned our attention to web-scraping the sites.  Each one of us selected a site, Chester(LinkedIn), Josh(CareerBuilder), and John(Indeed) where we attempted to scrape the data. Web scraping proved very challenging for us since these sites were not static, but rather dynamic which meant that the data that we needed required clicking on a link to access detailed information about the job posting. 
+A week later, we came up empty in our search for APIs. Most of the sites restricted access to their API or require a partnership with the site. We then turned our attention to web-scraping the sites.  Each one of us selected a site, Chester(LinkedIn), Josh(CareerBuilder), and John(Indeed) where we attempted to scrape the data. Web scraping proved very challenging for us since these sites were not static, but rather dynamic which meant that the data that we needed required clicking on a link to access detailed information about the job posting. In the section below, we each share our experiences with scraping each site.
 
-The R package, rvest, does not work well with dynamic web pages, only static ones. So, we turned to Python to do the scraping.  In particular, we used the Selenium package which uses a webdriver to access websites.  The Python code snippet below accesses the website. Navigates to the page, clicks on each link for a job posting, and scrapes the desired data. (See the Python notebooks for the full code.)
+John Hancock:
+
+The Indeed.com job site consisted of running a search for jobs and returing a page of hyperlinks for each job where you can find a full description of the job. I discovered that the R package, rvest, does not work well with web pages where you have to click on a link to access the information as the Indeed.com site had.  So, I turned to Python to do the scraping.  In particular, I used the Selenium package which uses a webdriver that automates a web browser to access websites. 
+
+(Python Code)[webscraper2.html]
 
 
 
-```{python}
-#DO NOT RUN
-for i in range(1,1000):
-    driver = webdriver.Firefox()
-    print(URL)
-    driver.get(URL)
-    driver.implicitly_wait(20)
-    elements = driver.find_elements_by_xpath('//*[contains(concat( " ", @class, " " ), concat( " ", "jobtitle", " " ))]//*[contains(concat( " ", @class, " " ), concat( " ", "turnstileLink", " " ))]')
-    
-    for job in elements:
-        try:
-            job.click()
-            post = driver.find_element_by_xpath('//*[@id="vjs-desc"]').text
-            title = driver.find_element_by_xpath('//*[@id="vjs-jobtitle"]').text 
-            company = driver.find_element_by_xpath('//*[@id="vjs-cn"]/a').text             
-            JobsB_df = JobsB_df.append({'Title':title,'Company':company, 'Description':post, 'Link':URL}, ignore_index=True)
-        except:
-            pass
-        
-    driver.quit()
-    counter = counter + i
-    pages = '&start=' + str(counter)
-    URL = Base_URL + pages   
-    counter = 325
-```
+See the Python notebooks for the full code.)
+
+
+
 
 The end result is that were able to scrape three job posting sites, LinkedIn, Indeed, and Careebuilder. The following sections provide the Analysis and answers the question.
 
