@@ -32,7 +32,7 @@ The Indeed.com job site consisted of running a search for jobs and returing a pa
 My process was automating a search for Data Science jobs in New York, NY.  The code navigates through the over 900 pages returned from the search. As stated earlier, each search results page contained hyperlinks to each job where contained more detailed information.  The Python code identifies each job link by their XPath variable, puts all of the links on the page into a list, iterates over that list and clicks on each link. Once the page was open, the job description, title, company were scraped from the page.  The entire process took quite a while.  It ran for more than three days, but I was able to get 330 job postings. 
 
 
-(Python Code)[https://github.com/JohnKHancock/DATA-607-Data-Acquisition-and-Management/blob/master/Project%20Three/webscraper2.html]
+<https://github.com/JohnKHancock/DATA-607-Data-Acquisition-and-Management/blob/master/Project%20Three/webscraper2.html>
 (See the Python notebook, webscraper2.ipynb)
 
 
@@ -44,7 +44,8 @@ One of the major challenges that was specific to LinkedIn was the website's secu
 
 As a next step, it would be best to gain permission from LinkedIn to webscrape their site. It was discovered rather late in the process that websites might have a `robots.txt` that specifies rules for webscraping as well as a contact email on how to gain access to scraping. Knowing this sooner could have saved much time. LinkedIn's `robots.txt` file is located here: <https://www.linkedin.com/robots.txt>
 
-
+For python code and markdown for LinkedIn.com scrape, see link below:
+<https://chesterpoon8.github.io/Project3-linked_in.html>
 
 **Joshua Bentley (CareerBuilder.com)**:
 
@@ -251,7 +252,8 @@ career <- read.csv('careerbuilder.csv', stringsAsFactors = FALSE)
 str(career)
 ```
 
-From viewing the structure of the data frame above, we'll remove the "X" column, rename the "jobdesc" and "jobbank..Job.Title." column to the appropriate names, and add the column to indicate the website we scraped from for this set. We'll also fix the job_id to be in line with the previous two data frames.
+From viewing the structure of the data frame above, we'll rename the "jobdesc" and "jobbank..Job.Title." column to the appropriate names and add the column to indicate the website we scraped from for this set. We'll also fix the job_id to be in line with the previous two data frames.
+
 
 ```{r}
 career <- career %>%
@@ -411,25 +413,12 @@ knitr::kable(s_avg, format = "html")
 
 ##III. Data Analysis
 
-####When sorting by the Total number of skills, we can see an outlier for the skill, "D", which seems to be an error.  No research shows that "D" is a job skill. so, that will be removed and saved into a revised data frame. 
-
-
-```{r}
-master_skills_df[order(-master_skills_df$Total),]
-```
-```{r}
-master_skills_df_01 <- master_skills_df[!master_skills_df$Skills == "D",]
-
-```
-```{r}
-master_skills_df_01[order(-master_skills_df_01$Total),]
-```
 ####Top 50 Skills
 #####Next, we pared down the list to the Top 50 skills by limiting the list to those skills which have more than 52 mentions in the job postings.
 
 ```{r}
 
-Top50_df <- master_skills_df_01[master_skills_df_01$Total>52,]
+Top50_df <- master_skills_df[master_skills_df$Total>54,]
 
 Top50_df <- Top50_df[order(-Top50_df$Total),]
 Top50_df 
@@ -461,16 +450,16 @@ tail(Top50_df_percentages,10)
 
 
 ```{r}
-Top5<- Top50_df[Top50_df$Total>556,]
-Top5<-Top5[order(-Top5$Total),]
-Top5
+Top6<- Top50_df[Top50_df$Total>556,]
+Top6<-Top5[order(-Top5$Total),]
+Top6
 ```
 
 ```{r}
 ggplot(data=Top5, aes(x=Skills, y=Total))+
     geom_bar(position="dodge",stat="identity",fill=c("orange")) + 
   coord_flip() +
-  ggtitle("Top Five Most In Demand Data Science Skills")
+  ggtitle("Top Six Most In Demand Data Science Skills")
 ```
 
 
@@ -480,13 +469,13 @@ wordcloud(Top50_df$Skills, Top50_df$Total)
 
 
 
-
-
-
-
 ##Conclusions
 
-The primary conclusion that we can draw is that the programming languages C, C++, R, Python, and SQL are mentioned the most in all of the job ads accounting for almost 64% of the total amount of skills requested in job ads which means that ALL other skills account for only 36% combined of what's requested in job ads. Also, R is more preferred than Python.  
+The primary conclusion that we can draw is that the programming languages D, C, C++, R, Python, and SQL are mentioned the most in all of the job ads accounting for almost 64% of the total amount of skills requested in job ads which means that ALL other skills account for only 36% combined of what's requested in job ads. Also, R is more preferred than Python.  
+
+When we first ran this project, we thought that "D" was in error, but Chester found that D is indeed a new programming language that's in very high demand for Data Science.  Below is a very good discussion of this language which by our estimates is the most requested job skill.
+
+<http://tech.adroll.com/blog/data/2014/11/17/d-is-for-data-science.html>
 
 
 
