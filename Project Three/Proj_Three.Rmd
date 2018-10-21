@@ -10,6 +10,58 @@ knitr::opts_chunk$set(echo = TRUE)
 options(warn=-1)
 ```
 
+#PROJECT THREE: Data Science Skills
+
+###by The Project Three Team:
+###Joshua Bentley
+###Chester Poon
+###John K. Hancock
+
+##Project Objective
+
+###Use data analysis to answer the question: "Which are the most valued data science skills?
+
+##Introduction:
+
+To answer that question, the Project Three team first met on September 13th via Google hangout to discuss an approach to the project.  In order to answer the question about highly valued data science skills, we had to go where there was data, and the most likely places were job search sites which would provide the data through job postings. At our meeting, We decided to research web APIs for the most popular job search websites, CareerBuilder, LinkedIn, Glassdoor, Monster, Indeed, Angelist, Upwork, Idealist, Hired, Dice, Fiverr, Zip Recruiter, Kaggle and others. 
+
+A week later, we came up empty in our search for APIs. Most of the sites restricted access to their API or require a partnership with the site. We then turned our attention to web-scraping the sites.  Each one of us selected a site, Chester(LinkedIn), Josh(CareerBuilder), and John(Indeed) where we attempted to scrape the data. Web scraping proved very challenging for us since these sites were not static, but rather dynamic which meant that the data that we needed required clicking on a link to access detailed information about the job posting. 
+
+The R package, rvest, does not work well with dynamic web pages, only static ones. So, we turned to Python to do the scraping.  In particular, we used the Selenium package which uses a webdriver to access websites.  The Python code snippet below accesses the website. Navigates to the page, clicks on each link for a job posting, and scrapes the desired data. (See the Python notebooks for the full code.)
+
+
+
+```{python}
+#DO NOT RUN
+for i in range(1,1000):
+    driver = webdriver.Firefox()
+    print(URL)
+    driver.get(URL)
+    driver.implicitly_wait(20)
+    elements = driver.find_elements_by_xpath('//*[contains(concat( " ", @class, " " ), concat( " ", "jobtitle", " " ))]//*[contains(concat( " ", @class, " " ), concat( " ", "turnstileLink", " " ))]')
+    
+    for job in elements:
+        try:
+            job.click()
+            post = driver.find_element_by_xpath('//*[@id="vjs-desc"]').text
+            title = driver.find_element_by_xpath('//*[@id="vjs-jobtitle"]').text 
+            company = driver.find_element_by_xpath('//*[@id="vjs-cn"]/a').text             
+            JobsB_df = JobsB_df.append({'Title':title,'Company':company, 'Description':post, 'Link':URL}, ignore_index=True)
+        except:
+            pass
+        
+    driver.quit()
+    counter = counter + i
+    pages = '&start=' + str(counter)
+    URL = Base_URL + pages   
+    counter = 325
+```
+
+The end result is that were able to scrape three job posting sites, LinkedIn, Indeed, and Careebuilder. The following sections provide the Analysis and answers the question.
+
+
+##Data Collection 
+
 
 ```{r, include=FALSE}
 library(tidyverse)  
@@ -21,15 +73,22 @@ library(rebus)
 library(lubridate)
 library(tm)
 library(purrr)
+library(plotly)
+library(wordcloud)
 ```
 
 ##LinkedIn Data Science Jobs
 
 ###Data webscraped by Chester Poon.  
 
+####The data that Chester scraped from LinkedIn was more structured than the data that Josh and I were able to scrape from CareerBuilder and Indeed. For most of the postings on LinkedIn, job qualifications were broken out in its own section.  The csv that Chester delivered was used as the basis for identifying skills scraped from the other two websites. 
+
 ```{r}
 LinkedIn_DSjobs <- read.csv("LinkedIn.csv", stringsAsFactors = FALSE)
-LinkedIn_DSjobs$skills<-str_trim( str_replace(LinkedIn_DSjobs$skills, "\\(Programming Language\\)", ""))
+
+#Cleaning the phrase "Programming Language" from Python so that we can match it in data from the other websites.
+LinkedIn_DSjobs$skills<-str_trim(str_replace(LinkedIn_DSjobs$skills, "\\(Programming Language\\)", ""))
+
 ```
 
 ```{r}
@@ -44,12 +103,18 @@ top_Skills[order(-top_Skills$n),]
 
 ###Data webscraped by John K Hancock. 
 
+####The scraped data from both Indeed.com and CareerBuilder.com was much less structured. The job postings were more free-form text than structured like LinkedIn.  Skills requested were not broken out into their section.  The entire text from the job description along with the Job Title and Job Company were scraped into csv files.
+
+
+
 ```{r, options(warn=-1)}
 Indeed_DSjobs <- read.csv("Data_Science_Indeed_Jobs.csv", stringsAsFactors = FALSE, encoding = "UTF-8")
 Indeed_DSjobs$Description <- str_replace_all(Indeed_DSjobs$Description,"[\n]","")
 top_Skills_Indeed <- data.frame(skills=character(), n=integer())
 
 ```
+
+####Each skill listed from LinkedIn were searched in the description of the job, and the number of hits were captured in a variable, "n". 
 
 ```{r}
 for (i in 1:nrow(top_Skills))
@@ -63,18 +128,18 @@ top_Skills_Indeed$skills <- as.character(top_Skills_Indeed$skills)
 top_Skills_Indeed<-top_Skills_Indeed[!duplicated(top_Skills_Indeed),]
 ```
 
+####In the end, we get a data frame which lists each skill and the number of times that skill is mentioned in the job descriptions on Indeed.com
 
 ```{r}
 top_Skills_Indeed[order(-top_Skills_Indeed$n),]
 ```
 
 
-
-
-
 ##CareerBuilder Data Science Jobs
 
 ###Data webscraped by Joshua Bentley. 
+
+####The process for Indeed.com was repeated for CareerBuilder.com
 
 ```{r}
 CareerBuilder_DSjobs <- read.csv("careerbuilder (2).csv", encoding = "UTF-8")
@@ -105,6 +170,11 @@ master_skills_df <- reduce(tables,left_join,by="skills")
 master_skills_df
 ```
 
+##Final Master Data Frame.
+
+####The frequency reports from the three data frames were compiled into one, the master_skills_df which tallies 912 skills listed on all three sites, the frequency per site and a total of all three sites.
+
+
 ```{r}
 master_skills_df$Total<- rowSums(master_skills_df[, c("n.x", "n.y", "n")], na.rm = TRUE)
 ```
@@ -118,4 +188,78 @@ master_skills_df
 write.csv(master_skills_df, file = "Master_Skills_List.csv")
 ```
 
+##Data Analysis
+
+####When sorting by the Total number of skills, we can see an outlier for the skill, "D", which seems to be an error.  No research shows that "D" is a job skill. so, that will be removed and saved into a revised data frame. 
+
+
+```{r}
+master_skills_df[order(-master_skills_df$Total),]
+```
+```{r}
+master_skills_df_01 <- master_skills_df[!master_skills_df$Skills == "D",]
+
+```
+```{r}
+master_skills_df_01[order(-master_skills_df_01$Total),]
+```
+####Top 50 Skills
+#####Next, we pared down the list to the Top 50 skills by limiting the list to those skills which have more than 52 mentions in the job postings.
+
+```{r}
+
+Top50_df <- master_skills_df_01[master_skills_df_01$Total>52,]
+
+Top50_df <- Top50_df[order(-Top50_df$Total),]
+Top50_df 
+```
+
+
+
+
+
+```{r}
+Top50_df_percentages <- Top50_df %>% 
+                        mutate(Indeed_pct = round(Indeed / sum(Indeed), 3),
+                               CareerBuilder_pct = round(CareerBuilder / sum(CareerBuilder),3),
+                               LinkedIn_pct = round(LinkedIn / sum(LinkedIn),3),
+                               Total_pct = round(Total / sum(Total),3)) %>% 
+                        select(Skills,Indeed_pct,CareerBuilder_pct,LinkedIn_pct,Total_pct) 
+                        
+Top50_df_percentages
+
+```
+
+```{r}
+Top5<- Top50_df[Top50_df$Total>556,]
+Top5<-Top5[order(-Top5$Total),]
+Top5
+```
+
+```{r}
+ggplot(data=Top5, aes(x=Skills, y=Total))+
+    geom_bar(position="dodge",stat="identity",fill=c("orange")) + 
+  coord_flip() +
+  ggtitle("Top Five Most In Demand Data Science Skills")
+```
+
+
+```{r}
+wordcloud(Top50_df$Skills, Top50_df$Total)
+```
+
+
+
+
+
+
+
+##Conclusions
+
+#####The first conclusion that we can draw is that the programming languages C, C++, R, Python, and SQL are mentioned the most in all of the job ads accounting for almost 64% of the total amount of skills requested in job ads. 
+
+
+
+
+##Reflections
 
