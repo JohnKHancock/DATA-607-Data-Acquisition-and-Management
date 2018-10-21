@@ -12,39 +12,48 @@ options(warn=-1)
 
 #PROJECT THREE: Data Science Skills
 
-###by The Project Three Team:
-###Joshua Bentley
-###Chester Poon
-###John K. Hancock
+####by The Project Three Team:
+####Joshua Bentley
+####Chester Poon
+####John K. Hancock
 
-##Project Objective
+##Project Objective: Use data analysis to answer the question: "Which are the most valued data science skills?
 
-###Use data analysis to answer the question: "Which are the most valued data science skills?
-
-##Introduction:
+####I. Introduction:
 
 To answer that question, the Project Three team first met on September 13th via Google hangout to discuss an approach to the project.  In order to answer the question about highly valued data science skills, we had to go where there was data, and the most likely places were job search sites which would provide the data through job postings. At our meeting, We decided to research web APIs for the most popular job search websites, CareerBuilder, LinkedIn, Glassdoor, Monster, Indeed, Angelist, Upwork, Idealist, Hired, Dice, Fiverr, Zip Recruiter, Kaggle and others. 
 
-A week later, we came up empty in our search for APIs. Most of the sites restricted access to their API or require a partnership with the site. We then turned our attention to web-scraping the sites.  Each one of us selected a site, Chester(LinkedIn), Josh(CareerBuilder), and John(Indeed) where we attempted to scrape the data. Web scraping proved very challenging for us since these sites were not static, but rather dynamic which meant that the data that we needed required clicking on a link to access detailed information about the job posting. In the section below, we each share our experiences with scraping each site.
+A week later, we came up empty in our search for APIs. Most of the sites restricted access to their API or require a partnership with the site. We then turned our attention to web-scraping the sites.  Each one of us selected a site, Chester Poon (LinkedIn), Joshua Bentley(CareerBuilder), and John Hancock(Indeed) where we attempted to scrape the data. Web scraping proved very challenging for us. In the sections below, we each recount our experience with scraping each site.
 
-John Hancock:
+**John Hancock (Indeed.com)**:
 
-The Indeed.com job site consisted of running a search for jobs and returing a page of hyperlinks for each job where you can find a full description of the job. I discovered that the R package, rvest, does not work well with web pages where you have to click on a link to access the information as the Indeed.com site had.  So, I turned to Python to do the scraping.  In particular, I used the Selenium package which uses a webdriver that automates a web browser to access websites. 
+The Indeed.com job site consisted of running a search for jobs and returing a page of hyperlinks for each job where you can find a full description of the job. I discovered that the R package, rvest, does not work well with web pages where you have to click on a link to access the information as the Indeed.com site had.  So, I turned to Python to do the scraping.  In particular, I used the Selenium package which uses a webdriver that automates a web browser to access websites.
 
-(Python Code)[webscraper2.html]
-
-
-
-See the Python notebooks for the full code.)
+My process was automating a search for Data Science jobs in New York, NY.  The code navigates through the over 900 pages returned from the search. As stated earlier, each search results page contained hyperlinks to each job where contained more detailed information.  The Python code identifies each job link by their XPath variable, puts all of the links on the page into a list, iterates over that list and clicks on each link. Once the page was open, the job description, title, company were scraped from the page.  The entire process took quite a while.  It ran for more than three days, but I was able to get 330 job postings. 
 
 
+(Python Code)[https://github.com/JohnKHancock/DATA-607-Data-Acquisition-and-Management/blob/master/Project%20Three/webscraper2.html]
+(See the Python notebook, webscraper2.ipynb)
 
 
-The end result is that were able to scrape three job posting sites, LinkedIn, Indeed, and Careebuilder. The following sections provide the Analysis and answers the question.
+**Chester Poon (LinkedIn.com)**:
+
+Challenges and Next steps for scraping LinkedIn
+
+One of the major challenges that was specific to LinkedIn was the website's security barriers. We were only able to do a one time scrape before the site flagged my profile and IP address as the source of a bot. I was able to get the initial pull data, however I was interested in pulling more data to be better in line with my teammates data. I was unable to do so because as soon as I would initialize the script, LinkedIn would automatically log me out. I had also tried creating a fake account as well as using Joshua's profile as a way to get around security without any luck. It was actually here where we discovered that for each login and for each person accessing the site, there were slight differences in how the page rendered that confounded the script. For example, one version had the text of a button tag nested inside a span tag whereas the other version did not. Other times, the attribute id was different in one version of the site versus the other. These dynamically changing sites and the action of logging me out when they detected a bot, limited our scope.
+
+As a next step, it would be best to gain permission from LinkedIn to webscrape their site. It was discovered rather late in the process that websites might have a `robots.txt` that specifies rules for webscraping as well as a contact email on how to gain access to scraping. Knowing this sooner could have saved much time. LinkedIn's `robots.txt` file is located here: <https://www.linkedin.com/robots.txt>
 
 
-##Data Collection 
 
+**Joshua Bentley (CareerBuilder.com)**:
+
+
+
+
+##II. Data Collection and Compilation into Final DataFrame
+
+This section details how the collected data was compiled into a final data frame.
 
 ```{r, include=FALSE}
 library(tidyverse)  
@@ -58,6 +67,8 @@ library(tm)
 library(purrr)
 library(plotly)
 library(wordcloud)
+library(DBI)
+library(RSQLite)
 ```
 
 ##LinkedIn Data Science Jobs
@@ -125,7 +136,7 @@ top_Skills_Indeed[order(-top_Skills_Indeed$n),]
 ####The process for Indeed.com was repeated for CareerBuilder.com
 
 ```{r}
-CareerBuilder_DSjobs <- read.csv("careerbuilder (2).csv", encoding = "UTF-8")
+CareerBuilder_DSjobs <- read.csv("careerbuilder.csv", encoding = "UTF-8")
 CareerBuilder_DSjobs$jobdesc <- str_replace_all(CareerBuilder_DSjobs$jobdesc,"[\n]","")
 top_Skills_CB <- data.frame(skills=character(), n=integer())
 
@@ -171,7 +182,234 @@ master_skills_df
 write.csv(master_skills_df, file = "Master_Skills_List.csv")
 ```
 
-##Data Analysis
+##II. Database RMD
+
+In this section, we detailed how the data was compiled into a relational database.
+
+#Overview
+
+In order to load the data we scraped from the three different websites, we'll first clean our data. The following would need to be done:
+
+* Unify the variable names so that each variable has only one name
+* Clean the data where necessary
+* Create separate data frames for each normalized table
+* Load our data frames as a table into our SQLite database
+
+
+
+#Cleaning Our Data
+
+###LinkedIn
+
+Let's load the LinkedIn csv file from our web scrape and take a quick glance.
+
+```{r}
+linkedin <- read.csv('LinkedIn.csv', stringsAsFactors = FALSE)
+knitr::kable(head(linkedin), format = "html")
+```
+
+Looks mostly clean already. We'll add another column to identify the source of the data, which we'll also do for the other two data sets.
+
+```{r}
+linkedin <- linkedin %>%
+  mutate(website = "linkedin.com")
+
+knitr::kable(head(linkedin), format = "html")
+```
+
+###Indeed
+
+Now we'll load the csv from the Indeed web scrape. We'll skip displaying the data from this data frame due to the large amount of text in one of our columns.
+
+```{r}
+indeed <- read.csv('Data_Science_Indeed_Jobs.csv', stringsAsFactors = FALSE)
+names(indeed)
+```
+
+From viewing this data, we can tell that "X" is actually our id for each job posting. We also will not need the link column as the other two datasets do not have it. However, we will keep the "Company" column as we were unable to scrape a specific industry from Indeed. We'll clean up the column names so that it's in line with the data frame for LinkedIn. We'll also make a small edit to `job_id` in order to keep things more uniform.
+
+```{r}
+indeed <- indeed %>%
+  mutate(website = "indeed.com") %>%
+  rename(job_id = X,
+        title = Title,
+        company = Company,
+        description = Description
+         ) %>%
+  select(-Link)
+indeed$job_id <- paste("IND",as.character(indeed$job_id), sep = "")
+
+str(indeed)
+```
+
+###CareerBuilder
+
+Our web scrape for CareerBuilder also includes a text heavy description column, so we'll just take a look at the structure to get an idea.
+
+```{r}
+career <- read.csv('careerbuilder.csv', stringsAsFactors = FALSE)
+str(career)
+```
+
+From viewing the structure of the data frame above, we'll remove the "X" column, rename the "jobdesc" and "jobbank..Job.Title." column to the appropriate names, and add the column to indicate the website we scraped from for this set. We'll also fix the job_id to be in line with the previous two data frames.
+
+```{r}
+career <- career %>%
+  rename(title = jobbank..Job.Title.,
+         description = jobdesc) %>%
+  select(-X) %>%
+  mutate(website = "careerbuilder.com")
+career$job_id <- paste("CB", as.character(career$job_id), sep = "")
+
+str(career)
+```
+
+###Merging the Three Data Frames
+
+Now that we have cleaned and prepared our three separate data sets from the three different sources, we can now unite them into a single data frame.
+
+```{r}
+main_df <- full_join(linkedin,indeed, 
+                     by=c("job_id",
+                          "title",
+                          "website"))
+main_df <- full_join(main_df,career,
+                     by=c("job_id",
+                          "title",
+                          "industry",
+                          "description",
+                          "website"))
+
+knitr::kable(head(main_df), format = "html")
+```
+
+Now that we have our single data frame, we can move onto building our database.
+
+#Building the Database in RSQLite
+
+In order to create our database to conform to standards, we've created separate dataframes to identify unique values for each variable in our main dataframe. We then applied IDs for each of those unique values. Each dataframe represents a table in our database. The below code takes the unique values for each column except for the jobs_id column. We'll also check to see each dataframe to make sure it has what we want.
+
+```{r}
+industry <- unique(main_df$industry)
+industry_id <- paste("IN",as.character(1:length(industry)),sep = "")
+industry_df <- data.frame(industry,industry_id)
+knitr::kable(head(industry_df), format = "html")
+
+skills <- unique(main_df$skills)
+skills_id <- paste("SK",as.character(1:length(skills)),sep = "")
+skills_df <- data.frame(skills,skills_id)
+knitr::kable(head(skills_df), format = "html")
+
+title <- unique(main_df$title)
+title_id <- paste("TI",as.character(1:length(title)),sep = "")
+title_df <- data.frame(title,title_id)
+knitr::kable(head(title_df), format = "html")
+
+company <- unique(main_df$company)
+company_id <- paste("CO",as.character(1:length(company)),sep = "")
+company_df <- data.frame(company,company_id)
+knitr::kable(head(company_df), format = "html")
+
+website <- unique(main_df$website)
+website_id <- paste("WS",as.character(1:length(website)),sep = "")
+website_df <- data.frame(website,website_id)
+knitr::kable(head(website_df), format = "html")
+
+description <- unique(main_df$description)
+description_id <- paste("D",as.character(1:length(description)),sep = "")
+description_df <- data.frame(description,description_id)
+str(description_df)
+```
+
+Now we'll build our jobs dataframe, which is a replica of the original main dataframe, but with ids instead of actual values for each variable. Doing this will allow for more flexibility and efficiency if we'd like to answer a variety of different questions.
+
+```{r, warning=FALSE}
+jobs_df <- main_df %>%
+  left_join(industry_df, by="industry") %>%
+  left_join(skills_df, by="skills") %>%
+  left_join(title_df, by="title") %>%
+  left_join(company_df, by="company") %>%
+  left_join(website_df, by="website") %>%
+  left_join(description_df, by="description") %>%
+  select(-industry,-skills,-title,-company,-website,-description)
+knitr::kable(head(jobs_df), format = "html")
+```
+
+We can now load our data into a database and create our connection.
+
+```{r}
+ds_job_db <- dbConnect(RSQLite::SQLite(), "")
+
+dbWriteTable(ds_job_db, "industry", industry_df)
+dbWriteTable(ds_job_db, "skills", skills_df)
+dbWriteTable(ds_job_db, "title", title_df)
+dbWriteTable(ds_job_db, "company", company_df)
+dbWriteTable(ds_job_db, "website", website_df)
+dbWriteTable(ds_job_db, "description", description_df)
+dbWriteTable(ds_job_db, "jobs", jobs_df)
+```
+
+#Exploratory Summary Analysis
+
+We'll now take a look at the following by writing SQL queries for each summary question and displaying on a simple graph using ggplot2:
+
+* Total number of jobs by website
+* Average number of data science skills required by each industry
+
+###Total Number of Jobs by Website
+
+```{r}
+jobs_cnt <- dbGetQuery(ds_job_db,
+           "
+SELECT DISTINCT
+  W.WEBSITE as Website
+  ,COUNT(DISTINCT J.JOB_ID) AS 'Number of Jobs'
+FROM JOBS J
+  INNER JOIN WEBSITE W ON J.WEBSITE_ID = W.WEBSITE_ID
+GROUP BY
+  W.WEBSITE
+           "
+           )
+
+ggplot(jobs_cnt, aes(Website,`Number of Jobs`)) +
+  geom_bar(stat = "identity", aes(fill=Website)) +
+  theme_minimal() +
+  geom_text(aes(label = `Number of Jobs`),vjust = 2)
+```
+
+###Top 25 Industries that on average request the most number of skills.
+
+```{r}
+s_avg <- dbGetQuery(ds_job_db,
+           "
+SELECT
+  MAIN.INDUSTRY
+  ,AVG(MAIN.COUNT) AS 'Average Number of Skills'
+FROM (
+  SELECT DISTINCT
+    I.INDUSTRY
+    ,J.JOB_ID
+    ,COUNT(DISTINCT S.SKILLS_ID) AS COUNT
+  FROM JOBS J
+    INNER JOIN INDUSTRY I ON J.INDUSTRY_ID = I.INDUSTRY_ID
+    INNER JOIN SKILLS S ON J.SKILLS_ID = S.SKILLS_ID
+  GROUP BY
+    I.INDUSTRY
+    ,J.JOB_ID
+) MAIN
+WHERE
+  MAIN.INDUSTRY IS NOT NULL
+GROUP BY
+  MAIN.INDUSTRY
+ORDER BY
+  AVG(MAIN.COUNT) DESC
+LIMIT 25
+           "
+           )
+knitr::kable(s_avg, format = "html")
+```
+
+##III. Data Analysis
 
 ####When sorting by the Total number of skills, we can see an outlier for the skill, "D", which seems to be an error.  No research shows that "D" is a job skill. so, that will be removed and saved into a revised data frame. 
 
@@ -209,9 +447,18 @@ Top50_df_percentages <- Top50_df %>%
                                Total_pct = round(Total / sum(Total),3)) %>% 
                         select(Skills,Indeed_pct,CareerBuilder_pct,LinkedIn_pct,Total_pct) 
                         
-Top50_df_percentages
+head(Top50_df_percentages,10)
 
 ```
+
+
+```{r}
+tail(Top50_df_percentages,10)
+```
+
+
+
+
 
 ```{r}
 Top5<- Top50_df[Top50_df$Total>556,]
@@ -239,10 +486,7 @@ wordcloud(Top50_df$Skills, Top50_df$Total)
 
 ##Conclusions
 
-#####The first conclusion that we can draw is that the programming languages C, C++, R, Python, and SQL are mentioned the most in all of the job ads accounting for almost 64% of the total amount of skills requested in job ads. 
+The primary conclusion that we can draw is that the programming languages C, C++, R, Python, and SQL are mentioned the most in all of the job ads accounting for almost 64% of the total amount of skills requested in job ads which means that ALL other skills account for only 36% combined of what's requested in job ads. Also, R is more preferred than Python.  
 
 
-
-
-##Reflections
 
