@@ -257,7 +257,7 @@ From viewing the structure of the data frame above, we'll remove the "X" column,
 career <- career %>%
   rename(title = jobbank..Job.Title.,
          description = jobdesc) %>%
-  select(-X) %>%
+  
   mutate(website = "careerbuilder.com")
 career$job_id <- paste("CB", as.character(career$job_id), sep = "")
 
