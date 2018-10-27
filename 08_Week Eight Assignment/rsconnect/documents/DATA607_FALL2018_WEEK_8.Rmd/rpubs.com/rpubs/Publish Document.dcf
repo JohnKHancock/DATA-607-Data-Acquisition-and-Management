@@ -1,0 +1,10 @@
+name: Publish Document
+title:
+username:
+account: rpubs
+server: rpubs.com
+hostUrl: rpubs.com
+appId: https://api.rpubs.com/api/v1/document/433906/604488afc4094e258ebb5b5ccc317aa7
+bundleId: https://api.rpubs.com/api/v1/document/433906/604488afc4094e258ebb5b5ccc317aa7
+url: http://rpubs.com/jkhancock/433906
+when: 1540681602.79549

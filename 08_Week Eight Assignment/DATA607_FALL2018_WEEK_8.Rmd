@@ -1,5 +1,5 @@
 ---
-title: "Week_8_Assignment"
+title: "Week_9_Assignment"
 author: "John K. Hancock"
 date: "October 23, 2018"
 output: html_document
@@ -9,7 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-##DATA607 - WEEK 8 Assignment - Working with the NY Times API
+##DATA607 - WEEK 9 Assignment - Working with the NY Times API
 
 ###Introduction
 
