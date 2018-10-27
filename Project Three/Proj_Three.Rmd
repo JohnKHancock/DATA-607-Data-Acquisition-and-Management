@@ -116,8 +116,9 @@ for (i in 1:nrow(top_Skills))
 {
      newRow <- data.frame(skills=top_Skills$skills[i], 
                           n=length(unlist(str_extract_all(Indeed_DSjobs$Description,top_Skills$skills[i]))))
+     newRow
     top_Skills_Indeed <- rbind(top_Skills_Indeed, newRow)
-
+    
 }
 top_Skills_Indeed$skills <- as.character(top_Skills_Indeed$skills)
 top_Skills_Indeed<-top_Skills_Indeed[!duplicated(top_Skills_Indeed),]
@@ -128,6 +129,11 @@ top_Skills_Indeed<-top_Skills_Indeed[!duplicated(top_Skills_Indeed),]
 ```{r}
 top_Skills_Indeed[order(-top_Skills_Indeed$n),]
 ```
+
+```{r}
+
+```
+
 
 
 ##CareerBuilder Data Science Jobs
@@ -153,11 +159,19 @@ for (i in 1:nrow(top_Skills))
 }
 ```
 
+```{r}
+str_extract_all(CareerBuilder_DSjobs$jobdesc,"C++")
+```
+
+
+
+
 
 ```{r}
 top_Skills_CB<-top_Skills_CB[!duplicated(top_Skills_CB), ]
 top_Skills_CB$skills<-as.character(top_Skills_CB$skills)
 top_Skills_CB[order(-top_Skills_CB$n),]
+
 ```
 ```{r}
 tables <- list(top_Skills,top_Skills_Indeed,top_Skills_CB)
@@ -175,7 +189,7 @@ master_skills_df$Total<- rowSums(master_skills_df[, c("n.x", "n.y", "n")], na.rm
 ```
 
 ```{r}
-colnames(master_skills_df) <- c("Skills", "Indeed", "CareerBuilder","LinkedIn", "Total")
+colnames(master_skills_df) <- c("Skills", "LinkedIn", "CareerBuilder","Indeed", "Total")
 master_skills_df
 ```
 

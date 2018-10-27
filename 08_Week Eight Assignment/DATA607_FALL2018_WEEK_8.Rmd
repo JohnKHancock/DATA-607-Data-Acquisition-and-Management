@@ -1,0 +1,170 @@
+---
+title: "Week_8_Assignment"
+author: "John K. Hancock"
+date: "October 23, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##DATA607 - WEEK 8 Assignment - Working with the NY Times API
+
+###Introduction
+
+For this week's assignment, I access the NY Times Movie reviews. 
+
+###Plan
+1. After obtaining an API key from the NY Times website, create a JSON call to the URL
+2. Each call is then loaded into a data frame called, NY_TIMES_CRITICS_df 
+3. Next loop over the links to the articles in the data frame and scrape the full article contents
+4. Text Mine the reviews to see if I can discern a pattern.
+5. Conclusion 
+
+
+```{r, include=FALSE}
+#import the required libraries
+library(dplyr)
+library(httr)
+library(jsonlite)
+library(tidyverse)  
+library(rvest)    
+library(stringr)   
+library(rebus)
+library(tm)
+library(wordcloud)
+```
+
+                  
+####1. Obtain the API key and create a baseURL
+
+```{r}
+#The 
+NYTimes_KEY <- "3f11a8ef5cf94222beda574c715815e8"
+baseURL = paste0("https://api.nytimes.com/svc/movies/v2/reviews/search.json?api-key=",NYTimes_KEY,sep="")
+
+```
+
+####2. Any call to the baseURL results in only 12 articles returned.  In order to get more, a parameter called "&offset=" must be appended to the baseURL with the number of a page to navigate to. 
+```{r}
+#Create an empty list called pages
+pages <- list()
+#create a for loop which makes 1000 calls to the API
+for(i in seq(0,100,2)){
+  NY_TIMES_CRITICS <- fromJSON(paste0(baseURL, "&offset=", i))
+  #Add the results of the calls to the pages list
+  pages[[i+1]] <- NY_TIMES_CRITICS$results
+  
+}
+
+
+```
+
+####3. Bind each list into one data frame, NY_TIMES_CRITICS_df 
+
+```{r}
+NY_TIMES_CRITICS_df <- rbind_pages(pages)
+dim(NY_TIMES_CRITICS_df)
+
+```
+####4. Unexpectedly, I got a lot of duplicate entries in the data frame which when removed, decreased the number of articles to 119.
+```{r}
+NY_TIMES_CRITICS_df <- NY_TIMES_CRITICS_df[!duplicated(NY_TIMES_CRITICS_df$link$url), ]
+dim(NY_TIMES_CRITICS_df)
+
+```
+
+```{r}
+#in the link$url column of the dataframe, there are links to the complete review which was not available in the initial API calls
+head(NY_TIMES_CRITICS_df$link$url,5)
+```
+
+
+####5. As a test, I wanted to see if I could correctly identify the html node and scrape the full body of the review.  
+
+```{r}
+webpage <- read_html("http://www.nytimes.com/2018/10/25/movies/burning-review.html" )
+article <- html_nodes(webpage, '.e2kc3sl0')
+```
+
+```{r}
+body <- html_text(article)
+
+head(body, 2)
+```
+####6. With the successful test, I was able to scrape the full text of each article.
+
+```{r}
+Body <- list()
+for (i in seq(1,119)){
+    print(NY_TIMES_CRITICS_df$link$url[i])
+    getContent <- read_html(NY_TIMES_CRITICS_df$link$url[i])
+    articles <- html_nodes(getContent, '.e2kc3sl0')
+    Body[i] <- list(html_text(articles))
+   
+    
+       
+}
+```
+
+```{r}
+for (i in seq(1, 119)){
+    NY_TIMES_CRITICS_df$Body[[i]] <- Body[[i]]
+}
+
+
+
+```
+####7.Final NY Times Data Frame
+
+
+```{r}
+head(NY_TIMES_CRITICS_df,10)
+```
+
+8. Text Mining - I followed this Youtube tutorial on Text Mining for this next part:
+
+[link]https://www.youtube.com/watch?v=lRTerj8fdY0&t=105s
+
+```{r}
+#Make all of the review text into one giant string
+
+review_text <-  paste(NY_TIMES_CRITICS_df$Body, collapse = ' ')
+review_source <- VectorSource(review_text)
+corpus <- Corpus(review_source)
+```
+
+
+```{r}
+#Text Cleaning
+corpus <- tm_map(corpus, content_transformer(tolower))
+corpus <- tm_map(corpus, removePunctuation)
+corpus <- tm_map(corpus, stripWhitespace)
+corpus <- tm_map(corpus, removeWords, stopwords("english"))
+
+
+
+
+```
+
+```{r}
+dtm <- DocumentTermMatrix(corpus)
+dtm2 <- as.matrix(dtm)
+frequency <- colSums(dtm2)
+frequency  <- sort(frequency, decreasing = TRUE)
+head(frequency, 50)
+```
+
+
+```{r}
+words <- names(frequency)
+wordcloud(words[1:100], frequency[1:100])
+```
+9.Conclusion
+
+The biggest conclusion that I found is that NY Times movie reviwers don't really use a lot of hyperbolic language in their reviews.  Few negative or positive adjectives are used frequently in their reviews which implies that their reviews are far more subtle. Also, there are few mentions of box office, awards, sequels, etc.  
+
+Just looking at the frequency of the words, it's difficult to find a common sentiment among these reviews.
+
+
