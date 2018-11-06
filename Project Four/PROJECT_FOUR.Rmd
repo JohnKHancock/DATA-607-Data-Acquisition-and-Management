@@ -1,0 +1,231 @@
+---
+title: "DATA607_PROJECT_FOUR"
+author: "John K. Hancock"
+date: "November 1, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Project Four - Document Classification
+
+
+## Introduction
+
+For this project, my challenge was trying to learn about Text Classification using R.  Specifically, I needed to learn how to create a email spam classifier to detect spam emails.  To accomplish this task, I found an excellent resource. A textbook titled, "Machine Learning for Hackers using R" by Drew Conway and John Myles White (O'Reilly). Copyright 2012 Drew Conway and John Myles White, 978-1-449-30371-6. 
+
+
+## Methodology
+
+My approach to this project was to use it as a tutorial.  I followed the code in the booK. 
+
+I.   Create environmental path variables and a function that that reads in the email and apply the function to the spam folder 
+II.  Create a function that reads in a Corpus of text files and returns a Document Term Matrix
+III. The next block creates a data frame consisting of terms and the frequency at which they occur
+IV.  Repeat the previous three steps for the Easy Ham folder.
+V.   Create the Bayes Email Classifier
+VI. Apply the classifier on the hardham data
+VII. Conclusion and Reflections
+
+
+
+```{r, include=FALSE}
+
+library(RCurl)
+library(XML)
+library(stringr)
+library(tm)
+library(ggplot2)
+```
+
+
+### I. Create environmental path variables and a function that that reads in the email and apply the function to the spam folder 
+
+
+
+```{r}
+#Set the path variables to the emails
+spam.path <- "Data/spam/"
+spam2.path <- "Data/spam_2/"
+easyham.path <- "Data/easy_ham/"
+easyham2.path <- "Data/easy_ham_2"
+hardham.path <- "Data/hard_ham/"
+```
+
+
+
+```{r}
+
+#This function reads in a path variable, makes a connection to a file, and reads in the text after a blank line in the email  The blank line separates the email body from the email header
+get.msg <- function(path) {
+con <- file(path, open="rt")
+text <- readLines(con)
+msg <- text[seq(which(text=="")[1]+1,length(text),1)]
+#After the email is read in, the connection is closed and a string without line spacing is returned.
+close(con)
+return(paste(msg, collapse="\n"))
+}
+```
+
+### II. Create a function that reads in a Corpus of text files and returns a Document Term Matrix
+
+
+```{r}
+#Reads all of the spam messages in the spam folder, removing the cmds file
+spam.docs <- dir(spam.path)
+spam.docs <- spam.docs[which(spam.docs!="cmds")]
+#Applies all of the spam into one file
+all.spam <- sapply(spam.docs, function(p) get.msg(paste(spam.path,p,sep="")))
+
+```
+
+```{r}
+#This function returns a document term matrix of a corpus.  A corpus is a collection of text data.  
+get.tdm <- function(doc.vec) {
+doc.corpus <- Corpus(VectorSource(doc.vec))
+#This list creates cleaning agents for the corpus by remocing stopwords, punctuation, numbers, and minimizing the frequency to at least 2
+control <- list(stopwords=TRUE, removePunctuation=TRUE, removeNumbers=TRUE,
+minDocFreq=2)
+doc.dtm <- TermDocumentMatrix(doc.corpus, control)
+return(doc.dtm)
+}
+```
+
+
+```{r}
+spam.tdm <- get.tdm(all.spam)
+ 
+```
+
+### III. The next block creates a data frame consisting of terms and the frequency at which they occur
+
+
+```{r}
+spam.matrix <- as.matrix(spam.tdm)
+spam.counts <- rowSums(spam.matrix)
+spam.df <- data.frame(cbind(names(spam.counts),
+as.numeric(spam.counts)), stringsAsFactors=FALSE)
+names(spam.df) <- c("term","frequency")
+spam.df$frequency <- as.numeric(spam.df$frequency)
+
+
+```
+
+
+```{r}
+spam.df
+```
+
+
+
+```{r}
+spam.occurrence <- sapply(1:nrow(spam.matrix),
+function(i) {length(which(spam.matrix[i,] > 0))/ncol(spam.matrix)})
+spam.density <- spam.df$frequency/sum(spam.df$frequency)
+spam.df <- transform(spam.df, density=spam.density,occurrence=spam.occurrence)
+
+```
+
+```{r}
+head(spam.df[with(spam.df, order(-occurrence)),])
+```
+### IV.  Repeat the previous three steps for the Easy Ham folder.
+
+```{r}
+easyham.docs <- dir(easyham.path)
+easyham.docs <- easyham.docs[which(easyham.docs != "cmds")]
+all.easyham <- sapply(easyham.docs[1:length(spam.docs)],
+                      function(p) get.msg(file.path(easyham.path, p)))
+
+easyham.tdm <- get.tdm(all.easyham)
+
+easyham.matrix <- as.matrix(easyham.tdm)
+easyham.counts <- rowSums(easyham.matrix)
+easyham.df <- data.frame(cbind(names(easyham.counts), as.numeric(easyham.counts)), stringsAsFactors = FALSE)
+names(easyham.df) <- c("term", "frequency")
+easyham.df$frequency <- as.numeric(easyham.df$frequency)
+easyham.occurrence <- sapply(1:nrow(easyham.matrix),
+                            function(i)
+                            {
+                              length(which(easyham.matrix[i, ] > 0)) / ncol(easyham.matrix)
+                            })
+easyham.density <- easyham.df$frequency / sum(easyham.df$frequency)
+
+easyham.df <- transform(easyham.df,
+                        density = easyham.density,
+                        occurrence = easyham.occurrence)
+```
+
+```{r}
+head(easyham.df[with(easyham.df, order(-occurrence)),])
+```
+
+### V.   Create the Bayes Email Classifier
+
+```{r}
+classify.email <- function(path, training.df, prior=0.5, c=1e-6) {
+#First three lines are similar to what was done previously, reading in the emails in the folder, create the document term matrix, and calculating frequencies
+msg <- get.msg(path)
+msg.tdm <- get.tdm(msg)
+msg.freq <- rowSums(as.matrix(msg.tdm))
+# Find intersections of words between the email and the training data. Calculates the intersection of subsets of a probability space. Comparisons are made row-wise, so that in the data frame case, intersect(A,B) is a data frame with those rows that are both in A and in B.
+msg.match <- intersect(names(msg.freq), training.df$term)
+#See Special Note below for more information
+if(length(msg.match) < 1) {
+return(prior*c^(length(msg.freq)))
+}
+else {
+match.probs <- training.df$occurrence[match(msg.match, training.df$term)]
+return(prior * prod(match.probs) * c^(length(msg.freq)-length(msg.match)))
+}
+}
+```
+
+####Note: from the text "Machine Learning for Hackers using R", page 87:
+
+
+msg.match will contain all of the terms from the email message in our spam training
+data, spam.df. If that intersection is empty, then the length of msg.match will be less than
+zero, and we can update our prior only by multiplying it with the product of the number
+of terms in the email with our tiny probability value: c. The result will be a tiny probability
+of assigning the spam label to the email.
+
+
+if this intersection is not empty, we need to find those terms from the email
+in our training data and look up their occurrence probabilities. We use the match function
+to do the lookup, which will return the term's element position in the term column
+of our training data. We use these element positions to return the corresponding probabilities
+from the occurrence column, and return those values to match.probs. We then
+calculate the product of these values and combine it with our prior belief about the
+email being spam with the term probabilities and the probabilities of any missing terms.
+The result is our Bayesian estimate for the probability that a message is spam given the
+matching terms in our training data.
+
+
+
+
+
+
+### VI. Apply the classifier on the hardham data
+
+```{r options(warn=-1)}
+hardham.docs <- dir(hardham.path)
+
+hardham.docs <- hardham.docs[which(hardham.docs != "cmds")]
+
+hardham.spamtest <- sapply(hardham.docs,function(p) classify.email(paste(hardham.path, p, sep=""),training.df=spam.df))
+
+hardham.hamtest <- sapply(hardham.docs, function(p) classify.email(paste(hardham.path, p, sep=""),training.df=easyham.df))
+
+hardham.res <- ifelse(hardham.spamtest > hardham.hamtest, TRUE, FALSE)
+
+summary(hardham.res)
+```
+
+### VII. Conclusion and Reflections
+
+Using the Bayesian classifirer, it was able to correctly identify 234 of the 250 documents as not being spam.  This project proved most challenging.  I had to do a lot of reseatch to understand how R uses NLP as well as applying a classifier. In a short amount of time, I did learn a lot and look forward to spending more time to better understand the material.
+
+
