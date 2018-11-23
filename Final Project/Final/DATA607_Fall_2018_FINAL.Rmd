@@ -1,0 +1,129 @@
+---
+title: "DATA607 Fall 2018 Final Project"
+author: "John K. Hancock"
+date: "November 12, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r, include=FALSE}
+library(rvest)
+library(dplyr)
+library(tidyr)
+library(viridisLite)
+library(ggplot2)
+library(stringr)
+library(lubridate)
+library(GENEAread)
+library(boxoffice)
+library(XML)
+library(jsonlite)
+```
+
+
+
+#IS 607 - Final Project 
+
+##Movie Data
+
+```{r}
+
+movies <- boxoffice(dates=as.Date("2018-11-10"), site = c("mojo"))
+
+movies <-  movies[order(desc(movies$total_gross)), ]
+
+```
+
+```{r}
+url <- 'https://www.the-numbers.com/market/2018/top-grossing-movies'
+
+movies<- url  %>% 
+  read_html() %>%
+  html_nodes(xpath = '//*[@id="page_filling_chart"]/table') %>% 
+  html_table(fill = TRUE)
+
+movies <- movies[[1]]
+
+
+movies_df<- as.data.frame(movies)
+
+```
+```{r}
+movies_df %>% 
+    filter(Movie == "Bad Times at the El Royale")
+```
+
+
+
+
+
+##NY Times Movie Reviews
+
+```{r}
+NYTimes_KEY <- "3f11a8ef5cf94222beda574c715815e8"
+baseURL = paste0("https://api.nytimes.com/svc/movies/v2/reviews/search.json?api-key=", NYTimes_KEY, sep="")
+
+```
+
+```{r}
+#Create an empty list called pages
+pages <- list()
+#create a for loop which makes 1000 calls to the API
+for(i in seq(0,1000,2)){
+  NY_TIMES_CRITICS <- fromJSON(paste0(baseURL, "&offset=", i))
+  #Add the results of the calls to the pages list
+  pages[[i+1]] <- NY_TIMES_CRITICS$results
+  
+}
+```
+
+
+```{r}
+NY_TIMES_CRITICS_df <- rbind_pages(pages)
+dim(NY_TIMES_CRITICS_df)
+
+```
+
+```{r}
+NY_TIMES_CRITICS_df <- NY_TIMES_CRITICS_df[!duplicated(NY_TIMES_CRITICS_df$link$url), ]
+NY_TIMES_CRITICS_df$link
+
+```
+```{r}
+Body <- list()
+X_path = '//*[contains(concat( " ", @class, " " ), concat( " ", "css-1572rug", " " ))]'
+for (i in seq(1,1017)){
+    getContent <- read_html(NY_TIMES_CRITICS_df$link$url[i])
+    articles <- html_nodes(getContent, xpath = X_path )
+    Body[i] <- list(html_text(articles))
+   
+    
+       
+}
+```
+
+
+
+```{r}
+
+```
+
+
+```{r}
+for (i in seq(1, 1017)){
+    NY_TIMES_CRITICS_df$Body[[i]] <- Body[[i]]
+}
+
+
+
+```
+
+
+```{r}
+write.csv(NY_TIMES_CRITICS_df, file = "NYTimes.csv")
+```
+

@@ -1,0 +1,55 @@
+ReviewID,MovieID,Rating,Comments
+1,1,4,I Loved It. Best Movie Ever.
+2,1,5,Great movie. Will See it Again.
+3,1,5,Soo many superheroes!!!
+4,1,5,It was great.
+5,1,4,Amazing
+6,1,2,Hated it
+7,1,1,Worst Movie Ever
+8,1,3,It was okay.
+1,2,2,So so.
+2,2,3,Allright
+3,2,2,Disappointing
+4,2,4,Loved it
+5,2,4,Funny movie
+6,2,4,Really liked it
+7,2,5,Grea film
+8,2,3,Average movie
+1,3,4,Fun times at the movie
+2,3,5,Me and my kids loved it
+3,3,3,It was okay.
+4,3,4,A good time
+5,3,5,Best movie of the summer
+6,3,5,Loved it
+7,3,4,My kids loved it.
+8,3,5,Whole family had a great time
+1,4,1,Fell asleep
+2,4,1,Boring
+3,4,2,Dull
+4,4,1,Awful
+5,4,5,Inspiring
+6,4,5,I admire her
+7,4,5,A remarkable woman
+8,4,5,My hero
+1,5,1,Hated this movie
+2,5,4,Tom Cruise rocks
+3,5,5,Stunts were awesome
+4,5,5,Fantastic
+5,5,1,Terrible movie
+6,5,1,Horrible
+7,5,1,Want my money back
+8,5,1,Do not waste your time
+1,6,1,Weid
+2,6,1,Did not understand it
+3,6,1,Not my taste
+4,6,1,Over my head
+5,6,1,I am not the audience for this film
+6,6,2,Wait until its on Netflix
+1,7,1,Dumbest movie ever
+2,7,1,Can't belive I wasted my money on that film.
+3,7,1,Worst Star Wars movie ever
+4,7,1,Horrible
+5,7,1,Boring
+6,7,2,Dont see it
+7,7,1,Totally forgettable
+8,7,1,Truly Awful

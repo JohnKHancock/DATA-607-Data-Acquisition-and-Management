@@ -1,0 +1,5 @@
+'C:/Users/jkhan/Documents/GitHub/DATA-607-Data-Acquisition-and-Management/12_Week Twelve Assignment'
+
+"C:\Program Files\MongoDB\Server\4.0\bin\mongod.exe" --dbpath C:\ProgramData\MongoDB\data
+
+"C:\Program Files\MongoDB\Server\4.0\bin\mongo.exe"
